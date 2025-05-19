@@ -1193,6 +1193,163 @@ int main(){
 }
 ```
 
+### A41 三分小数
+
+```python
+import sys
+import math
+
+INF = float('inf')
+EPS = 1e-9
+
+def f(x, n, a, b, c):
+    maxn = -INF
+    for i in range(n):
+        val = a[i] * x * x + b[i] * x + c[i]
+        maxn = max(maxn, val)
+    return maxn
+
+t = int(input())
+for _ in range(t):
+    n = int(input())
+    a = []
+    b = []
+    c = []
+    for _ in range(n):
+        ai, bi, ci = map(int, input().split())
+        a.append(ai)
+        b.append(bi)
+        c.append(ci)
+
+    l = 0.0
+    r = 1000.0
+    while r - l > EPS:
+        m1 = (2 * l + r) / 3
+        m2 = (l + 2 * r) / 3
+        if f(m1, n, a, b, c) < f(m2, n, a, b, c):
+            r = m2
+        else:
+            l = m1
+    print(f"{f(l, n, a, b, c):.4f}")
+```
+
+```c++
+#include<bits/stdc++.h>
+using namespace std;
+
+const int N=114514,inf=INT_MAX;
+const double eps=1e-9;
+
+int n;
+int a[N],b[N],c[N];
+inline double f(double x){
+	double maxn=-inf;
+	for(int i=1;i<=n;i++){
+		maxn=max(maxn,a[i]*x*x+b[i]*x+c[i]);
+	}
+	return maxn;
+}
+
+signed main() {
+	int t;
+	cin>>t;
+	while(t--){
+		cin>>n;
+		for(int i=1;i<=n;i++){
+			cin>>a[i]>>b[i]>>c[i];
+		}
+
+		double l=0,r=1000;
+		while(r-l>eps){
+			double m1=(2*l+r)/3;
+			double m2=(l+2*r)/3;
+			if(f(m1)<f(m2)){
+				r=m2;
+			}else{
+				l=m1;
+			}
+		}
+
+		cout<<fixed<<setprecision(4)<<f(l)<<endl;
+	}
+	return 0;
+}
+```
+
+### A42 三分整数
+
+```python
+def get_sum(f, x):
+    total = 0
+    for k, a, b in f:
+        total += abs(k * x + a) + b
+    return total
+
+t = int(input())
+for _ in range(t):
+    n, l, r = map(int, input().split())
+    f = [tuple(map(int, input().split())) for _ in range(n)]
+
+    while l + 2 <= r:
+        diff = (r - l) // 3
+        mid1 = l + diff
+        mid2 = r - diff
+        sum1 = get_sum(f, mid1)
+        sum2 = get_sum(f, mid2)
+        if sum1 <= sum2:
+            r = mid2 - 1
+        else:
+            l = mid1 + 1
+
+    print(min(get_sum(f, l), get_sum(f, r)))
+```
+
+```c++
+#include <iostream>
+#include <vector>
+using namespace std;
+
+struct fun {
+    int k, a, b;
+};
+
+long long getSum(vector<fun>& f, long long x) {
+    long long ans = 0;
+    for (fun& fi : f) {
+        ans += abs(fi.k * x + fi.a) + fi.b;
+    }
+    return ans;
+}
+
+int main() {
+    int t, n, l, r;
+    cin >> t;
+    while (t--) {
+        cin >> n >> l >> r;
+        vector<fun> f(n);
+        for (int i = 0; i < n; ++i) {
+            cin >> f[i].k >> f[i].a >> f[i].b;
+        }
+        while (l + 2 <= r) {
+            int diff = (r - l) / 3;
+            int mid1 = l + diff;
+            int mid2 = r - diff;
+            long long sum1 = getSum(f, mid1);
+            long long sum2 = getSum(f, mid2);
+            if (sum1 <= sum2) {
+                r = mid2 - 1;
+            } else {
+                l = mid1 + 1;
+            }
+        }
+        cout << min(getSum(f, l), getSum(f, r)) << endl;
+    }
+}
+// 64 位输出请用 printf("%lld")
+```
+
+
+
 ------
 
 ## B-搜索算法
@@ -1538,6 +1695,294 @@ int main(){
 }
 ```
 
+### C5 普通平衡树
+
+```python
+import sys
+
+class Node:
+    def __init__(self):
+        self.ch = [0, 0]  # 左右孩子
+        self.fa = 0  # 父节点
+        self.v = 0  # 节点值
+        self.cnt = 0  # 值出现次数
+        self.siz = 0  # 子树大小
+
+    def init(self, p, v1):
+        self.fa = p
+        self.v = v1
+        self.cnt = self.siz = 1
+
+
+def ls(x):
+    return tr[x].ch[0]
+
+
+def rs(x):
+    return tr[x].ch[1]
+
+
+def pushup(x):
+    tr[x].siz = tr[ls(x)].siz + tr[rs(x)].siz + tr[x].cnt
+
+
+def rotate(x):
+    y = tr[x].fa
+    z = tr[y].fa
+    k = 1 if tr[y].ch[1] == x else 0
+    tr[z].ch[1 if tr[z].ch[1] == y else 0] = x
+    tr[x].fa = z
+    tr[y].ch[k] = tr[x].ch[k ^ 1]
+    tr[tr[x].ch[k ^ 1]].fa = y
+    tr[x].ch[k ^ 1] = y
+    tr[y].fa = x
+    pushup(y)
+    pushup(x)
+
+
+def splay(x, k):
+    while tr[x].fa != k:
+        y = tr[x].fa
+        z = tr[y].fa
+        if z != k:
+            if (ls(y) == x) ^ (ls(z) == y):
+                rotate(x)
+            else:
+                rotate(y)
+        rotate(x)
+    if k == 0:
+        global root
+        root = x
+
+
+def insert(v):
+    global root, tot
+    x = root
+    p = 0
+    while x != 0 and tr[x].v != v:
+        p = x
+        x = tr[x].ch[1 if v > tr[x].v else 0]
+    if x != 0:
+        tr[x].cnt += 1
+    else:
+        tot += 1
+        x = tot
+        tr[p].ch[1 if v > tr[p].v else 0] = x
+        tr[x].init(p, v)
+    splay(x, 0)
+
+
+def find(v):
+    global root
+    x = root
+    while tr[x].ch[1 if v > tr[x].v else 0] != 0 and v != tr[x].v:
+        x = tr[x].ch[1 if v > tr[x].v else 0]
+    splay(x, 0)
+
+
+def getpre(v):
+    global root
+    find(v)
+    x = root
+    if tr[x].v < v:
+        return x
+    x = ls(x)
+    while rs(x) != 0:
+        x = rs(x)
+    splay(x, 0)
+    return x
+
+
+def getsuc(v):
+    global root
+    find(v)
+    x = root
+    if tr[x].v > v:
+        return x
+    x = rs(x)
+    while ls(x) != 0:
+        x = ls(x)
+    splay(x, 0)
+    return x
+
+
+def del_(v):
+    pre = getpre(v)
+    suc = getsuc(v)
+    splay(pre, 0)
+    splay(suc, pre)
+    del_node = tr[suc].ch[0]
+    if tr[del_node].cnt > 1:
+        tr[del_node].cnt -= 1
+        splay(del_node, 0)
+    else:
+        tr[suc].ch[0] = 0
+        splay(suc, 0)
+
+
+def getrank(v):
+    insert(v)
+    res = tr[ls(root)].siz
+    del_(v)
+    return res
+
+
+def getval(k):
+    global root
+    x = root
+    while True:
+        if k <= tr[ls(x)].siz:
+            x = ls(x)
+        elif k <= tr[ls(x)].siz + tr[x].cnt:
+            break
+        else:
+            k -= tr[ls(x)].siz + tr[x].cnt
+            x = rs(x)
+    splay(x, 0)
+    return tr[x].v
+
+
+N = 110001
+INF = (1 << 30) + 1
+tr = [Node() for _ in range(N)]
+root = 0
+tot = 0
+
+
+insert(-INF)
+insert(INF)
+n = int(sys.stdin.readline())
+for _ in range(n):
+    op, x = map(int, sys.stdin.readline().split())
+    if op == 1:
+        insert(x)
+    elif op == 2:
+        del_(x)
+    elif op == 3:
+        print(getrank(x))
+    elif op == 4:
+        print(getval(x + 1))
+    elif op == 5:
+        print(tr[getpre(x)].v)
+    else:
+        print(tr[getsuc(x)].v)
+```
+
+```c++
+#include <iostream>
+using namespace std;
+
+#define ls(x) tr[x].ch[0]
+#define rs(x) tr[x].ch[1]
+const int N=1100010, INF=(1<<30)+1;
+struct node{
+  int ch[2]; //儿
+  int fa; //父
+  int v;  //点权
+  int cnt; //点权次数
+  int siz; //子树大小
+  void init(int p,int v1){
+    fa=p, v=v1;
+    cnt=siz=1;
+  }
+}tr[N];
+int root,tot; //根,节点个数
+
+void pushup(int x){ //上传
+  tr[x].siz=tr[ls(x)].siz+tr[rs(x)].siz+tr[x].cnt;
+}
+void rotate(int x){ //旋转
+  int y=tr[x].fa, z=tr[y].fa, k=tr[y].ch[1]==x; //y的右儿是x
+  tr[z].ch[tr[z].ch[1]==y]=x, tr[x].fa=z; //z的儿是x,x的父是z
+  tr[y].ch[k]=tr[x].ch[k^1], tr[tr[x].ch[k^1]].fa=y; //y的儿是x的异儿,x的异儿的父是y
+  tr[x].ch[k^1]=y, tr[y].fa=x; //x的异儿是y,y的父是x
+  pushup(y), pushup(x); //自底向上push
+}
+void splay(int x, int k){ //伸展
+  while(tr[x].fa!=k){ //折线转xx,直线转yx
+    int y=tr[x].fa, z=tr[y].fa;
+    if(z!=k) (ls(y)==x)^(ls(z)==y)?rotate(x):rotate(y);
+    rotate(x);
+  }
+  if(!k) root=x; //k=0时,x转到根
+}
+void insert(int v){ //插入
+  int x=root, p=0;
+  //x走到空节点或走到目标点结束
+  while(x&&tr[x].v!=v) p=x,x=tr[x].ch[v>tr[x].v];
+  if(x) tr[x].cnt++; //目标点情况
+  else{ //空节点情况
+    x=++tot;
+    tr[p].ch[v>tr[p].v]=x;
+    tr[x].init(p,v);
+  }
+  splay(x, 0);
+}
+void find(int v){ //找到v并转到根
+  int x=root;
+  while(tr[x].ch[v>tr[x].v]&&v!=tr[x].v)
+    x=tr[x].ch[v>tr[x].v];
+  splay(x, 0);
+}
+int getpre(int v){ //前驱
+  find(v);
+  int x=root;
+  if(tr[x].v<v) return x;
+  x=ls(x);
+  while(rs(x)) x=rs(x);
+  splay(x, 0);
+  return x;
+}
+int getsuc(int v){ //后继
+  find(v);
+  int x=root;
+  if(tr[x].v>v) return x;
+  x=rs(x);
+  while(ls(x)) x=ls(x);
+  splay(x, 0);
+  return x;
+}
+void del(int v){ //删除
+  int pre=getpre(v);
+  int suc=getsuc(v);
+  splay(pre,0), splay(suc,pre);
+  int del=tr[suc].ch[0];
+  if(tr[del].cnt>1)
+    tr[del].cnt--, splay(del,0);
+  else
+    tr[suc].ch[0]=0, splay(suc,0);
+}
+int getrank(int v){ //排名
+  insert(v);
+  int res=tr[tr[root].ch[0]].siz;
+  del(v);
+  return res;
+}
+int getval(int k){ //数值
+  int x=root;
+  while(true){
+    if(k<=tr[ls(x)].siz) x=ls(x);
+    else if(k<=tr[ls(x)].siz+tr[x].cnt) break;
+    else k-=tr[ls(x)].siz+tr[x].cnt, x=rs(x);
+  }
+  splay(x, 0);
+  return tr[x].v;
+}
+int main(){
+  insert(-INF);insert(INF); //哨兵
+  int n,op,x; scanf("%d", &n);
+  while(n--){
+    scanf("%d%d", &op, &x);
+    if(op==1) insert(x);
+    else if(op==2) del(x);
+    else if(op==3) printf("%d\n",getrank(x));
+    else if(op==4) printf("%d\n",getval(x+1));
+    else if(op==5) printf("%d\n",tr[getpre(x)].v);
+    else printf("%d\n",tr[getsuc(x)].v);
+  }
+}
+```
+
 ### C8 主席树
 
 ```python
@@ -1748,11 +2193,198 @@ int main(){
 }
 ```
 
+### C111 莫队
+
+```python
+import sys
+import math
+from collections import defaultdict
+sys.setrecursionlimit(10**7)
+input = sys.stdin.readline
+n, m, k = map(int, input().split())
+a = [0] + list(map(int, input().split()))
+
+B = int(math.sqrt(n))
+
+q = []
+for i in range(m):
+    l, r = map(int, input().split())
+    q.append((l, r, i))
+
+def mo_key(x):
+    block = x[0] // B
+    return (block, x[1] if block % 2 == 0 else -x[1])
+
+q.sort(key=mo_key)
+
+c = defaultdict(int)
+sum = 0
+
+def add(x):
+    global sum
+    sum -= c[x] * c[x]
+    c[x] += 1
+    sum += c[x] * c[x]
+
+def remove(x):
+    global sum
+    sum -= c[x] * c[x]
+    c[x] -= 1
+    sum += c[x] * c[x]
+
+ans = [0] * m
+l, r = 1, 0
+for L, R, idx in q:
+    while l > L:
+        l -= 1
+        add(a[l])
+    while r < R:
+        r += 1
+        add(a[r])
+    while l < L:
+        remove(a[l])
+        l += 1
+    while r > R:
+        remove(a[r])
+        r -= 1
+    ans[idx] = sum
+
+print("\n".join(map(str, ans)))
+```
+
+```c++
+// 普通莫队 O(n*sqrt(n))
+#include <iostream>
+#include <cstring>
+#include <algorithm>
+#include <cmath>
+using namespace std;
+
+const int N=50005;
+int n,m,k,B,a[N];
+int sum,c[N],ans[N];
+struct Q{
+  int l,r,id;
+  //按l所在块的编号l/B和r排序
+  bool operator<(Q &b){
+    if(l/B!=b.l/B) return l<b.l;
+    if((l/B)&1) return r<b.r;
+    return r>b.r;
+  }
+}q[N];
+
+void add(int x){ //扩展一个数
+  sum-=c[x]*c[x];
+  c[x]++;
+  sum+=c[x]*c[x];
+}
+void del(int x){ //删除一个数
+  sum-=c[x]*c[x];
+  c[x]--;
+  sum+=c[x]*c[x];
+}
+int main(){
+  scanf("%d%d%d",&n,&m,&k);
+  B=sqrt(n); //块的大小
+  for(int i=1;i<=n;++i)scanf("%d",&a[i]);
+  for(int i=1;i<=m;++i)
+    scanf("%d%d",&q[i].l,&q[i].r),q[i].id=i;
+  sort(q+1,q+1+m); //按l/B和r排序
+  for(int i=1,l=1,r=0;i<=m;++i){
+    while(l>q[i].l) add(a[--l]);//左扩展
+    while(r<q[i].r) add(a[++r]);//右扩展
+    while(l<q[i].l) del(a[l++]);//左删除
+    while(r>q[i].r) del(a[r--]);//右删除
+    ans[q[i].id]=sum;
+  }
+  for(int i=1;i<=m;++i)printf("%d\n",ans[i]);
+}
+```
+
 
 
 ------
 
 ## D-图论
+
+### D1 拓扑排序
+
+```python
+### kahn算法
+import sys
+from collections import deque
+
+def toposort():
+    q = deque()
+    for i in range(1, n + 1):
+        if din[i] == 0:
+            q.append(i)
+    while q:
+        x = q.popleft()
+        tp.append(x)
+        for y in e[x]:
+            din[y] -= 1
+            if din[y] == 0:
+                q.append(y)
+    return len(tp) == n
+
+# 读取 n, m
+n, m = map(int, sys.stdin.readline().split())
+# 初始化邻接表和入度数组
+e = [[] for _ in range(n + 1)]
+din = [0] * (n + 1)
+tp = []
+
+# 读取边信息
+for _ in range(m):
+    a, b = map(int, sys.stdin.readline().split())
+    e[a].append(b)
+    din[b] += 1
+
+# 执行拓扑排序并输出结果
+if not toposort():
+    print(-1)
+else:
+    print(*tp)
+```
+
+```c++
+// Kahn算法 O(n)
+#include <iostream>
+#include <cstring>
+#include <algorithm>
+#include <queue>
+using namespace std;
+const int N = 100010;
+int n,m,a,b;
+vector<int> e[N], tp;
+int din[N];
+
+bool toposort(){
+  queue<int> q;
+  for(int i = 1; i <= n; i++)
+    if(din[i]==0) q.push(i);
+  while(q.size()){
+    int x=q.front(); q.pop();
+    tp.push_back(x);
+    for(auto y : e[x]){
+      if(--din[y]==0) q.push(y);
+    }
+  }
+  return tp.size() == n;
+}
+int main(){
+  cin >> n >> m;
+  for(int i=0; i<m; i++){
+    cin >> a >> b;
+    e[a].push_back(b);
+    din[b]++;
+  }
+  if(!toposort()) puts("-1");
+  else for(auto x:tp)printf("%d ",x);
+  return 0;
+}
+```
 
 ### D2 狄克斯特拉算法-单源最短路径
 
@@ -3413,6 +4045,47 @@ int main(){
   return 0;
 }
 ```
+
+### G49 向量运算
+
+```python
+import math
+
+class Point:
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+
+def dot(a, b):  # 求点积
+    return a.x * b.x + a.y * b.y
+
+def length(a):  # 求模长
+    return math.sqrt(a.x * a.x + a.y * a.y)
+
+def angle(a, b):  # 求夹角（单位：弧度）
+    return math.acos(dot(a, b) / (length(a) * length(b)))
+
+
+```
+
+
+
+```c++
+double dot(Point a, Point b) { // 求点积
+    return a.x * b.x + a.y * b.y;
+}
+
+double len(Point a) { // 求模长
+    return sqrt(a.x * a.x + a.y * a.y);
+}
+
+double angle(Point a, Point b) { // 求夹角
+    return acos(dot(a, b) / len(a) / len(b));
+}
+
+```
+
+
 
 ### G52 凸包算法
 
