@@ -105,15 +105,15 @@ using namespace std;
 int main() {
     vector<vector<int>> a = {{5,2}, {4,3}, {8,6}};
     
-    auto cmp = [](const auto& x) { return x[0] + x[1]; };
+    auto cmp = [](auto x) { return x[0] + x[1]; };
     
-    sort(a.begin(), a.end(), [&](const auto& x, const auto& y) {
+    sort(a.begin(), a.end(), [&](auto x, auto y) {
         int sum_x = cmp(x);
         int sum_y = cmp(y);
         return tie(sum_x, x[0]) < tie(sum_y, y[0]);
     });
     
-    for (const auto& v : a) {
+    for (auto v : a) {
         cout << v[0] << " " << v[1] << "\n"; 
     }
 }
@@ -425,3 +425,6 @@ int main() {
 | **浮点精度**             | `double`，非常飞舞，但是可以注射血清进行强化-比如扩展到200位：<br />`from decimal import Decimal, getcontext`<br />`getcontext().prec = 200` | `double`/`long double`         |
 | **组合数**               | `math.comb(r, n)`仅限于小一点的数，大数太慢了                | 无                             |
 | **字符串转整数突破上限** | `import sys` <br />`sys.set_int_max_str_digits(100001)`      | 无                             |
+
+## 七、字符串处理
+

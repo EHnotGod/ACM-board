@@ -4085,7 +4085,30 @@ double angle(Point a, Point b) { // 求夹角
 
 ```
 
+### G50 P点在不在多边形内部
 
+```c++
+bool pointInPolygon(const vector<Point>& poly, const Point& P) {
+    int n = poly.size();
+    bool inside = false;
+    for (int i = 0, j = n - 1; i < n; j = i++) {
+        const Point &A = poly[i], &B = poly[j];
+        double cross = (B.x - A.x) * (P.y - A.y) - (B.y - A.y) * (P.x - A.x);
+        if (fabs(cross) < 1e-9) {
+ 
+            if (min(A.x,B.x) - 1e-9 <= P.x && P.x <= max(A.x,B.x) + 1e-9 &&
+                min(A.y,B.y) - 1e-9 <= P.y && P.y <= max(A.y,B.y) + 1e-9) {
+                return true;
+            }
+        }
+        bool cond1 = (A.y > P.y) != (B.y > P.y);
+        double xinters = A.x + (P.y - A.y) * (B.x - A.x) / (B.y - A.y);
+        if (cond1 && xinters > P.x)
+            inside = !inside;
+    }
+    return inside;
+}
+```
 
 ### G52 凸包算法
 
