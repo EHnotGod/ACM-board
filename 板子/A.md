@@ -2938,6 +2938,271 @@ int main(){
 }
 ```
 
+### D9 倍增算法（LCA）
+
+```python
+import sys
+
+sys.setrecursionlimit(10 ** 7)
+input = sys.stdin.readline
+
+# 最大节点数和最大二进制位数（因为 2^20 > 10^6，足够应对 N ≤ 5e5）
+N = 500_005
+LOG = 20
+
+# 邻接表存储树的边
+edges = [[] for _ in range(N)]
+
+# f[u][i] 表示节点 u 的第 2^i 级祖先
+# dep[u] 存储节点 u 的深度（根节点深度为 1）
+f = [[0] * (LOG + 1) for _ in range(N)]
+dep = [0] * N
+
+
+def dfs(u: int, parent: int) -> None:
+    """
+    从 u 开始对整棵树做一次深度优先遍历，顺便预处理二倍祖先 f[u][i] 和深度 dep[u]。
+
+    参数:
+      u      - 当前节点
+      parent - u 的父节点（0 表示虚拟根）
+    """
+    # 初始化 u 的 2^0 祖先（也就是父节点）和深度
+    f[u][0] = parent
+    dep[u] = dep[parent] + 1
+
+    # 依次计算 f[u][1..LOG]，即 2^1、2^2、…、2^LOG 级祖先
+    for i in range(1, LOG + 1):
+        # f[u][i] = f[ f[u][i-1] ][i-1]
+        f[u][i] = f[f[u][i - 1]][i - 1]
+
+    # 遍历所有相邻的孩子 v，继续 dfs
+    for v in edges[u]:
+        if v == parent:
+            continue
+        dfs(v, u)
+
+
+def lca(u: int, v: int) -> int:
+    """
+    计算节点 u 和 v 的最近公共祖先（Lowest Common Ancestor）。
+
+    思路：
+      1. 如果 u、v 深度不一致，先把深度较深的节点提升到与另一节点同层。
+      2. 如果此时 u == v，则直接返回。
+      3. 否则，从最高位开始尝试让 u、v 同时往上跳，直到它们的父节点相同为止。
+      4. 最后返回它们共同的父节点。
+    """
+    # 保证 dep[u] ≥ dep[v]
+    if dep[u] < dep[v]:
+        u, v = v, u
+
+    # 先把 u 提升到与 v 相同的深度
+    diff = dep[u] - dep[v]
+    for i in range(LOG + 1):
+        if diff & (1 << i):
+            u = f[u][i]
+
+    # 如果相等，则这个节点就是 LCA
+    if u == v:
+        return u
+
+    # 从最高位开始，若 u、v 的 2^i 祖先不同，则同时跳上去
+    for i in reversed(range(LOG + 1)):
+        if f[u][i] != f[v][i]:
+            u = f[u][i]
+            v = f[v][i]
+
+    # 此时 u、v 的父节点就是 LCA
+    return f[u][0]
+
+
+# ------------------------------
+# 读取输入、构建树并回答查询
+# ------------------------------
+
+# n: 节点数； m: 查询次数； s: 以 s 为根的 LCA 树
+n, m, s = map(int, input().split())
+
+# 读取 n-1 条边，建立无向树
+for _ in range(n - 1):
+    a, b = map(int, input().split())
+    edges[a].append(b)
+    edges[b].append(a)
+
+# 从根 s 开始 dfs 预处理
+dfs(s, 0)
+
+# 处理 m 次 LCA 查询
+for _ in range(m):
+    u, v = map(int, input().split())
+    print(lca(u, v))
+
+```
+
+```c++
+// 倍增法 O(nlogn)
+#include<bits/stdc++.h>
+using namespace std;
+
+const int N=500005;
+int n,m,s;
+vector<int> e[N];
+int f[N][22],dep[N];
+
+void dfs(int u,int fa){
+  f[u][0]=fa; dep[u]=dep[fa]+1;
+  for(int i=1;i<=20;i++) //u的2,4,8...祖先
+    f[u][i]=f[f[u][i-1]][i-1];
+  for(int v:e[u])
+    if(v!=fa) dfs(v,u);
+}
+int lca(int u,int v){
+  if(dep[u]<dep[v]) swap(u,v);
+  for(int i=20;~i;i--) //u先大步后小步向上跳，直到与v同层
+    if(dep[f[u][i]]>=dep[v]) u=f[u][i];
+  if(u==v) return v;
+  for(int i=20;~i;i--) //u,v一起向上跳，直到lca的下面
+    if(f[u][i]!=f[v][i]) u=f[u][i],v=f[v][i];
+  return f[u][0];
+}
+int main(){
+  scanf("%d%d%d",&n,&m,&s);
+  for(int i=1,a,b; i<n; i++){
+    scanf("%d%d",&a,&b);
+    e[a].push_back(b);
+    e[b].push_back(a);
+  }
+  dfs(s,0);
+  for(int i=0,a,b;i<m;i++){
+    scanf("%d%d",&a,&b);
+    printf("%d\n",lca(a,b));
+  }
+}
+```
+
+### D10 Tarjan算法（离线LCA）
+
+```python
+import sys
+sys.setrecursionlimit(10**7)
+input = sys.stdin.readline
+
+# 最大节点数、查询数上限
+N = 500_005
+M = 2 * N
+
+# 树的邻接表
+edges = [[] for _ in range(N)]
+# 存放每个节点的 LCA 查询：queries[u] = [(v, idx), ...]
+queries = [[] for _ in range(N)]
+# 并查集父指针，初始时 fa[x]=x
+fa = list(range(N))
+# 标记节点是否已访问过
+visited = [False] * N
+# 存放每个查询的答案，按输入顺序
+ans = [0] * M
+
+def find(x: int) -> int:
+    """并查集查找（带路径压缩）"""
+    if fa[x] != x:
+        fa[x] = find(fa[x])
+    return fa[x]
+
+def tarjan(u: int) -> None:
+    """
+    以 u 为根做一次 DFS，离开子树时合并并查集，
+    并在回溯到 u 时处理所有与 u 有关的 LCA 查询。
+    """
+    visited[u] = True
+    for v in edges[u]:
+        if not visited[v]:
+            tarjan(v)
+            # 子树处理完后，将子节点 v 的并查集父指向 u
+            fa[v] = u
+
+    # 所有子节点都已处理，处理 u 发起的所有查询
+    for v, idx in queries[u]:
+        # 如果查询的另一个节点 v 已经访问过，就能确定 LCA
+        if visited[v]:
+            ans[idx] = find(v)
+
+# ------------------------------
+# 读取输入、构建数据结构、执行 Tarjan 离线 LCA
+# ------------------------------
+n, m, s = map(int, input().split())
+
+# 读入 n−1 条边，构建无向树
+for _ in range(n - 1):
+    a, b = map(int, input().split())
+    edges[a].append(b)
+    edges[b].append(a)
+
+# 读入 m 条 LCA 查询，双向加入查询列表
+for i in range(1, m + 1):
+    u, v = map(int, input().split())
+    queries[u].append((v, i))
+    queries[v].append((u, i))
+
+# 初始化并查集（只需对 1..n）
+for i in range(1, n + 1):
+    fa[i] = i
+
+# 从根节点 s 开始 Tarjan 算法
+tarjan(s)
+
+# 输出所有查询的结果
+for i in range(1, m + 1):
+    print(ans[i])
+```
+
+```c++
+// Tarjan算法 O(n+m)
+#include<bits/stdc++.h>
+using namespace std;
+
+const int N=500005,M=2*N;
+int n,m,s,a,b;
+vector<int> e[N];
+vector<pair<int,int>> query[N];
+int fa[N],vis[N],ans[M];
+
+int find(int x){
+  if(x==fa[x]) return x;
+  return fa[x]=find(fa[x]);
+}
+void tarjan(int x){
+  vis[x]=true; //标记x已访问
+  for(auto y:e[x]){
+    if(!vis[y]){
+      tarjan(y);
+      fa[y]=x; //回到x时指向x
+    }
+  }
+  for(auto q : query[x]){ //离开x时找LCA
+    int y=q.first,i=q.second;
+    if(vis[y])ans[i]=find(y);
+  }
+}
+int main(){
+  scanf("%d%d%d",&n,&m,&s);
+  for(int i=1; i<n; i++){
+    scanf("%d%d",&a,&b);
+    e[a].push_back(b);
+    e[b].push_back(a);
+  }
+  for(int i=1;i<=m;i++){
+    scanf("%d%d",&a,&b);
+    query[a].push_back({b,i});
+    query[b].push_back({a,i});
+  }
+  for(int i=1;i<=N;i++)fa[i]=i;
+  tarjan(s);
+  for(int i=1; i<=m; i++)
+    printf("%d\n",ans[i]);
+}
+```
+
 ### D11 树链剖分（LCA）
 
 ```python
@@ -3920,6 +4185,174 @@ int main(){
 }
 ```
 
+### G2 高精度快速幂
+
+```python
+import sys
+N = 500
+def mul(a, b):  # 高精度乘法
+    t = [0] * (N * 2)
+    for i in range(N):
+        for j in range(N):
+            t[i + j] += a[i] * b[j]
+            t[i + j + 1] += t[i + j] // 10
+            t[i + j] %= 10
+    return t
+def quickpow(p):  # 快速幂
+    a = [0] * N
+    res = [0] * N
+    a[0] = 2
+    res[0] = 1
+    while p:
+        if p & 1:
+            res = mul(res, a)
+        a = mul(a, a)
+        p >>= 1
+    res[0] -= 1  # 个位修正
+    return res
+def main():
+    p = int(sys.stdin.readline())
+    # 输出位数
+    print(int(p * __import__('math').log10(2)) + 1)
+
+    res = quickpow(p)
+    for i in range(10):
+        start = N - 1 - i * 50
+        line_digits = res[start - 49:start + 1]
+        print(''.join(str(d) for d in reversed(line_digits)))
+if __name__ == '__main__':
+    main()
+```
+
+```c++
+#include <iostream>
+#include <cstring>
+#include <algorithm>
+#include <vector>
+#include <cmath>
+using namespace std;
+
+const int N=500;
+typedef vector<int> VI;
+VI a(N),res(N);
+int p;
+
+VI mul(VI &a, VI &b){//高精度
+  VI t(N*2);
+  for(int i=0; i<N; i++)
+    for(int j=0; j<N; j++){
+      t[i+j] += a[i]*b[j];
+      t[i+j+1] += t[i+j]/10;
+      t[i+j] %= 10;
+    }
+  return t;
+}
+void quickpow(int p){//快速幂
+  res[0]=1, a[0]=2;
+  while(p){
+    if(p & 1) res = mul(res,a);
+    a = mul(a,a);
+    p >>= 1;
+  }
+  res[0]--; //个位修正
+}
+int main(){
+  cin >> p;
+  printf("%d\n",int(p*log10(2))+1);
+  quickpow(p);
+  for(int i=0, k=499; i<10; i++){
+    for(int j=0; j<50; j++, k--)
+      printf("%d",res[k]);
+    puts("");
+  }
+  return 0;
+}
+```
+
+### G3 矩阵快速幂
+
+```python
+import sys
+MOD = 10**9 + 7
+def mat_mult(X, Y, n):  # 矩阵乘法：返回 X * Y
+    Z = [[0] * n for _ in range(n)]
+    for i in range(n):
+        for k in range(n):
+            if X[i][k]:  # 跳过零元，加快运算
+                xik = X[i][k]
+                for j in range(n):
+                    Z[i][j] = (Z[i][j] + xik * Y[k][j]) % MOD
+    return Z
+
+def mat_pow(A, exp, n):  # 快速幂：A^exp
+    # 初始化为单位矩阵
+    res = [[1 if i == j else 0 for j in range(n)] for i in range(n)]
+    base = A
+    while exp:
+        if exp & 1:
+            res = mat_mult(res, base, n)
+        base = mat_mult(base, base, n)
+        exp >>= 1
+    return res
+n, k = map(int, input().split())
+# 读取矩阵，转换为 0-index 列表
+A = []
+for i in range(n):
+    A.append(list(map(int, input().split())))
+# 计算 A^k 模 MOD
+result = mat_pow(A, k, n)
+# 输出结果矩阵
+out = []
+for row in result:
+    out.append(' '.join(str(v) for v in row))
+sys.stdout.write('\n'.join(out))
+```
+
+```c++
+#include <iostream>
+#include <cstring>
+#include <algorithm>
+using namespace std;
+
+typedef long long LL;
+const int mod=1000000007;
+struct matrix{
+    LL c[101][101];
+    matrix(){memset(c, 0, sizeof c);}
+} A, res;
+LL n, k;
+
+matrix operator*(matrix &x, matrix &y){ //矩阵乘法
+    matrix t; //临时矩阵
+    for(int i=1; i<=n; i++)
+      for(int j=1; j<=n; j++)
+        for(int k=1; k<=n; k++)
+          t.c[i][j]=(t.c[i][j]+x.c[i][k]*y.c[k][j])%mod;
+    return t;
+}
+void quickpow(LL k){ //快速幂
+    for(int i=1; i<=n; i++) res.c[i][i]=1; //单位矩阵
+    while(k){
+        if(k & 1) res = res*A;
+        A = A*A;
+        k >>= 1;
+    }
+}
+int main(){
+    scanf("%d%lld",&n,&k);
+    for(int i=1; i<=n; i++)
+        for(int j=1; j<=n; j++)
+            scanf("%d",&A.c[i][j]);
+    quickpow(k);
+    for(int i=1; i<=n; i++){
+        for(int j=1; j<=n; j++)
+            printf("%d ",res.c[i][j]);
+        puts("");
+    }
+    return 0;
+}
+```
+
 ### G5 gcd及lcm问题
 
 ```python
@@ -4015,6 +4448,154 @@ int main(){
 }
 ```
 
+### G9 欧拉函数
+
+```c++
+import sys
+
+def get_phi(n):
+    phi = [0] * (n + 1)
+    vis = [False] * (n + 1)
+    primes = []
+    phi[1] = 1
+    for i in range(2, n + 1):
+        if not vis[i]:
+            primes.append(i)
+            phi[i] = i - 1
+        for p in primes:
+            m = i * p
+            if m > n:
+                break
+            vis[m] = True
+            if i % p == 0:
+                # p | i
+                phi[m] = p * phi[i]
+                break
+            else:
+                phi[m] = (p - 1) * phi[i]
+    return phi
+
+data = sys.stdin.read().split()
+n = int(data[0])
+phi = get_phi(n)
+# 输出 1..n
+out = '\n'.join(str(phi[i]) for i in range(1, n + 1))
+sys.stdout.write(out)
+```
+
+```c++
+#include <iostream>
+using namespace std;
+
+const int N = 1000010;
+int p[N], vis[N], cnt;
+int phi[N];
+
+void get_phi(int n){//筛法求欧拉函数
+  phi[1] = 1;
+  for(int i=2; i<=n; i++){
+    if(!vis[i]){
+      p[cnt++] = i;
+      phi[i] = i-1;
+    }
+    for(int j=0; i*p[j]<=n; j++){
+      int m = i*p[j];
+      vis[m] = 1;
+      if(i%p[j] == 0){
+        phi[m] = p[j]*phi[i];
+        break;
+      }
+      else
+        phi[m]=(p[j]-1)*phi[i];
+    }
+  }
+}
+int main(){
+  int n;
+  cin >> n;
+  get_phi(n);
+  for(int i=1; i<=n; i++)
+    printf("%d\n", phi[i]);
+  return 0;
+}
+```
+
+### G10 筛法求因数个数
+
+```python
+n = int(input())
+p = [0] * (n + 1)
+vis = [0] * (n + 1)
+a = [0] * (n + 1)
+d = [0] * (n + 1)
+cnt = 0
+d[1] = 1
+for i in range(2, n + 1):
+    if not vis[i]:
+        cnt += 1; p[cnt] = i
+        a[i] = 1; d[i] = 2
+    for j in range(1, n + 1):
+        if i * p[j] > n:
+            break
+        m = i * p[j]
+        vis[m] = 1
+        if i % p[j] == 0:
+            a[m] = a[i] + 1
+            d[m] = d[i] // a[m] * (a[m] + 1)
+            break
+        else:
+            a[m] = 1
+            d[m] = d[i] * 2
+for i in range(1, n + 1):
+    print(d[i], end=" ")
+```
+
+```c++
+#include <iostream>
+using namespace std;
+
+const int N = 1000010;
+int p[N], vis[N], cnt;
+int a[N]; //a[i]记录i的最小质因子的次数
+int d[N]; //d[i]记录i的约数个数
+
+void get_d(int n){ //筛法求约数个数
+  d[1] = 1;
+  for(int i=2; i<=n; i++){
+    if(!vis[i]){
+      p[++cnt] = i;
+      a[i] = 1;
+      d[i] = 2;
+    }
+    for(int j=1; i*p[j]<=n; j++){
+      int m = i*p[j];
+      vis[m] = 1;
+      if(i%p[j] == 0){
+        a[m] = a[i]+1;
+        d[m] = d[i]/a[m]*(a[m]+1);
+        break;
+      } 
+      else{
+        a[m] = 1;
+        d[m] = d[i]*2;
+      }
+    }
+  }
+}
+int main(){
+  int n;
+  cin >> n;
+  get_d(n);
+  for(int i=1; i<=n; i++)
+    printf("%d\n", d[i]);
+  return 0;
+}
+```
+
+### G11 筛法求约数和
+
+详见题目集
+
 ### G13 费马小定理
 
 ```python
@@ -4046,6 +4627,450 @@ int main(){
 }
 ```
 
+### G14 拓展欧拉定理-超大幂次取余
+
+详见题目集
+
+### G17 拓展欧几里得-不定方程
+
+太简单了，不写py代码了。
+
+```c++
+#include <iostream>
+#include <cstring>
+#include <algorithm>
+using namespace std;
+    
+int exgcd(int a,int b,int &x,int &y){
+  if(b == 0) {x=1, y=0; return a;}
+  int x1, y1, d;
+  d = exgcd(b, a%b, x1, y1);
+  x = y1, y = x1-a/b*y1;
+  return d;
+}
+int main(){
+  int a, b, c, x, y;
+  cin >> a >> b >> c;
+  int d = exgcd(a,b,x,y);
+  if(c%d == 0) 
+    printf("%d %d",c/d*x,c/d*y);
+  else puts("none");
+  return 0;
+}
+```
+
+### G18 拓展欧几里得-乘法逆元
+
+太简单了，不写py代码了。
+
+```c++
+#include <iostream>
+#include <cstring>
+#include <algorithm>
+using namespace std;
+    
+int exgcd(int a,int b,int &x,int &y){
+  if(b == 0){x = 1, y = 0; return a;}
+  int x1, y1, d;
+  d = exgcd(b, a%b, x1, y1);
+  x = y1, y = x1-a/b*y1;
+  return d;
+}
+int main(){
+  int a, b, m, x, y;
+  scanf("%d%d%d", &a, &b, &m);
+  int d = exgcd(a, m, x, y);
+  if(b%d == 0) 
+    printf("%d", 1ll*x*b/d%m);
+  else puts("none");
+  return 0;
+}
+```
+
+### G20 扩展中国剩余定理
+
+```c++
+#include <iostream>
+#include <cstring>
+#include <algorithm>
+using namespace std;
+
+typedef __int128 LL;
+const int N = 100005;
+LL n, m[N], r[N];
+
+LL exgcd(LL a,LL b,LL &x,LL &y){
+  if(b==0){x=1, y=0; return a;}
+  LL d, x1, y1;
+  d = exgcd(b, a%b, x1, y1);
+  x = y1, y = x1-a/b*y1;
+  return d;
+}
+LL EXCRT(LL m[], LL r[]){
+  LL m1, m2, r1, r2, p, q;
+  m1 = m[1], r1 = r[1];
+  for(int i=2; i<=n; i++){
+    m2 = m[i], r2 = r[i];
+    LL d = exgcd(m1,m2,p,q);
+    if((r2-r1)%d){return -1;}
+    p=p*(r2-r1)/d; //特解
+    p=(p%(m2/d)+m2/d)%(m2/d);
+    r1 = m1*p+r1;
+    m1 = m1*m2/d;
+  }
+  return (r1%m1+m1)%m1;
+}
+int main(){
+  scanf("%lld", &n);
+  for(int i = 1; i <= n; ++i)
+    scanf("%lld%lld", m+i, r+i);
+  printf("%lld\n",EXCRT(m,r));
+  return 0;
+}
+```
+
+```python
+def exgcd(a, b):
+    if b == 0:
+        return a, 1, 0
+    d, x1, y1 = exgcd(b, a % b)
+    x = y1
+    y = x1 - a // b * y1
+    return d, x, y
+
+def EXCRT(m, r):
+    m1 = m[1]
+    r1 = r[1]
+    for i in range(2, n + 1):
+        m2 = m[i]
+        r2 = r[i]
+        d, p, q = exgcd(m1, m2)
+        # 不可整除则无解
+        if (r2 - r1) % d != 0:
+            return -1
+        # 求一个特解并取模
+        p = p * ((r2 - r1) // d)
+        p = p % (m2 // d)
+        r1 = m1 * p + r1
+        m1 = m1 * (m2 // d)
+    return r1 % m1
+
+if __name__ == "__main__":
+    n = int(input().strip())
+    m = [0] * (n + 1)
+    r = [0] * (n + 1)
+    for i in range(1, n + 1):
+        mi, ri = map(int, input().split())
+        m[i] = mi
+        r[i] = ri
+    print(EXCRT(m, r))
+```
+
+### G22 拓展BSGS算法
+
+```python
+import math
+
+def gcd(a, b):
+    return a if b == 0 else gcd(b, a % b)
+
+def exbsgs(a, b, p):
+    a %= p
+    b %= p
+    if b == 1 or p == 1:
+        return 0  # x = 0
+
+    # 处理 gcd 除掉公共因子
+    k = 0
+    A = 1 % p
+    while True:
+        d = gcd(a, p)
+        if d == 1:
+            break
+        if b % d != 0:
+            return -1
+        k += 1
+        b //= d
+        p //= d
+        A = (A * (a // d)) % p
+        if A == b:
+            return k
+
+    # baby-step giant-step
+    m = math.isqrt(p)
+    if m * m < p:
+        m += 1
+
+    t = b % p
+    table = {t: 0}
+    for j in range(1, m):
+        t = (t * a) % p
+        table[t] = j
+
+    mi = pow(a, m, p)  # a^m % p
+    t = A % p
+    for i in range(1, m + 1):
+        t = (t * mi) % p
+        if t in table:
+            return i * m - table[t] + k
+
+    return -1
+
+# 使用 input() 逐个 token 读取（可处理不同换行/空格的输入格式）
+def tokens():
+    while True:
+        try:
+            for tok in input().split():
+                yield tok
+        except EOFError:
+            return
+
+if __name__ == "__main__":
+    it = tokens()
+    while True:
+        try:
+            a = int(next(it))
+            p = int(next(it))
+            b = int(next(it))
+        except StopIteration:
+            break
+        if a == 0:
+            break
+        res = exbsgs(a, b, p)
+        if res == -1:
+            print("No Solution")
+        else:
+            print(res)
+```
+
+```c++
+#include <iostream>
+#include <cstring>
+#include <algorithm>
+#include <cmath>
+#include <unordered_map>
+using namespace std;
+
+typedef long long LL;
+
+LL gcd(LL a, LL b){
+  return b==0?a:gcd(b,a%b);
+}
+LL exbsgs(LL a, LL b, LL p){
+  a %= p; b %= p;
+  if(b==1||p==1)return 0;//x=0
+
+  LL d, k=0, A=1;
+  while(true){
+    d = gcd(a,p);
+    if(d==1) break;
+    if(b%d) return -1; //无解
+    k++; b/=d; p/=d;
+    A = A*(a/d)%p; //求a^k/D
+    if(A==b) return k;
+  }
+
+  LL m=ceil(sqrt(p));
+  LL t = b;
+  unordered_map<int,int> hash;
+  hash[b] = 0;
+  for(int j = 1; j < m; j++){
+    t = t*a%p; //求b*a^j
+    hash[t] = j;
+  }
+  LL mi = 1;
+  for(int i = 1; i <= m; i++)
+    mi = mi*a%p; //求a^m
+  t = A;
+  for(int i=1; i <= m; i++){
+    t = t*mi%p; //求(a^m)^i
+    if(hash.count(t))
+      return i*m-hash[t]+k;
+  }
+  return -1; //无解
+}
+int main(){
+  LL a, p, b;
+  while((scanf("%lld%lld%lld",&a,&p,&b)!=EOF)&&a){
+    LL res = exbsgs(a, b, p);
+    if(res == -1) puts("No Solution");
+    else printf("%lld\n",res);
+  }
+  return 0;
+}
+```
+
+### G23 高斯消元法
+
+```python
+
+def gauss():
+    c, r = 0, 0
+    for c in range(n):
+        t = r
+        for i in range(r, n):
+            if abs(a[i][c]) > abs(a[t][c]):
+                t = i
+        if abs(a[t][c]) < 1e-6:
+            continue
+        for i in range(c, n + 1):
+            a[t][i], a[r][i] = a[r][i], a[t][i]
+        for i in range(n, c - 1, -1):
+            a[r][i] /= a[r][c]
+        for i in range(r + 1, n):
+            if abs(a[i][c]) > 1e-6:
+                for j in range(n, c - 1, -1):
+                    a[i][j] -= a[i][c] * a[r][j]
+        r += 1
+    if r < n:
+        for i in range(r, n):
+            if abs(a[i][n]) > 1e-6:
+                return 2
+        return 1
+    for i in range(n - 1, -1, -1):
+        for j in range(i + 1, n):
+            a[i][n] -= a[i][j] * a[j][n]
+    return 0
+
+n = int(input())
+a = []
+for i in range(n):
+    a.append(list(map(float, input().split())))
+t = gauss()
+if t:
+    print("No Solution")
+else:
+    for i in range(n):
+        print("{:.2f}".format(a[i][n]))
+```
+
+```c++
+#include <iostream>
+#include <algorithm>
+#include <cmath>
+using namespace std;
+
+const int N=110;
+const double eps=1e-6;
+int n;
+double a[N][N]; //增广矩阵
+
+int gauss(){
+  int c,r;//当前列，当前行
+  for(c=r=0; c<n; c++){
+    //1.找到c列的最大行t
+    int t=r;
+    for(int i=r; i<n; i++)
+      if(fabs(a[i][c])>fabs(a[t][c])) t=i;
+    if(fabs(a[t][c])<eps) continue; //c列已0化
+
+    //2.把最大行换到上面
+    for(int i=c; i<n+1; i++)swap(a[t][i],a[r][i]);
+
+    //3.把当前行r的第一个数，变成1
+    for(int i=n; i>=c; i--)a[r][i]/=a[r][c];
+
+    //4.把当前列c下面的所有数，全部消成0
+    for(int i=r+1; i<n; i++)
+      if(fabs(a[i][c])>eps)
+        for(int j=n; j>=c; j--)
+          a[i][j]-=a[i][c]*a[r][j];
+    r++; //这一行的工作做完，换下一行
+  }
+  if(r<n){ //说明已经提前变成梯形矩阵
+    for(int i=r; i<n; i++)
+      if(fabs(a[i][n])>eps) //a[i][n]==bi
+        return 2; //左边=0，右边≠0,无解
+    return 1; //0==0，无穷多解
+  }
+  //5.唯一解，从下往上回代，得到方程的解
+  for(int i=n-1; i>=0; i--)
+    for(int j=i+1; j<n; j++)
+      a[i][n]-=a[i][j]*a[j][n];
+  return 0;
+}
+int main(){
+  cin >> n;
+  for(int i=0; i<n; i++)
+    for(int j=0; j<=n; j++)
+      cin >> a[i][j];
+  int t=gauss();
+  if(t) puts("No Solution");
+  else for(int i=0; i<n; i++)
+        printf("%.2lf\n",a[i][n]);
+}
+```
+
+### G29 隔板法
+
+详见题目
+
+### G32 卡特兰数
+
+同上
+
+### G33 整出分块
+
+同上
+
+### G41 FFT-多项式乘法
+
+```c++
+// 迭代版 1.5s
+#include <iostream>
+#include <cstring>
+#include <algorithm>
+#include <cmath>
+using namespace std;
+const int N=4e6;
+const double PI=acos(-1);
+
+struct complex{
+  double x, y;
+  complex operator+(const complex& t)const{
+    return {x+t.x, y+t.y};}
+  complex operator-(const complex& t)const{
+    return {x-t.x, y-t.y};}
+  complex operator*(const complex& t)const{
+    return {x*t.x-y*t.y, x*t.y+y*t.x};}
+}A[N], B[N];
+int R[N];
+
+void FFT(complex A[],int n,int op){
+  for(int i=0; i<n; ++i)
+    R[i] = R[i/2]/2 + ((i&1)?n/2:0);
+  for(int i=0; i<n; ++i)
+    if(i<R[i]) swap(A[i],A[R[i]]);
+  for(int i=2; i<=n; i<<=1){
+    complex w1({cos(2*PI/i),sin(2*PI/i)*op});
+    for(int j=0; j<n; j+=i){
+      complex wk({1,0});
+      for(int k=j; k<j+i/2; ++k){
+        complex x=A[k], y=A[k+i/2]*wk;
+        A[k]=x+y; A[k+i/2]=x-y;
+        wk=wk*w1;
+      }
+    }
+  }
+}
+int main(){
+  int n,m;
+  scanf("%d%d", &n, &m);
+  for(int i=0; i<=n; i++)scanf("%lf", &A[i].x);
+  for(int i=0; i<=m; i++)scanf("%lf", &B[i].x);
+  for(m=n+m,n=1;n<=m;n<<=1);
+  FFT(A,n,1); FFT(B,n,1);
+  for(int i=0;i<n;++i)A[i]=A[i]*B[i];
+  FFT(A,n,-1);
+  for(int i=0;i<=m;++i)
+    printf("%d ",(int)(A[i].x/n+0.5));
+}
+```
+
+### G45+G46 第一、二类斯特林数
+
+无。（递推还要我写？）
+
 ### G49 向量运算
 
 ```python
@@ -4067,8 +5092,6 @@ def angle(a, b):  # 求夹角（单位：弧度）
 
 
 ```
-
-
 
 ```c++
 double dot(Point a, Point b) { // 求点积
@@ -4207,5 +5230,167 @@ int main(){
   printf("%d\n",rotating_calipers());
   return 0;
 }
+```
+
+### G99 超级gcd
+
+```python
+import sys
+import threading
+import math
+
+MOD = 998244353
+PHI = MOD - 1  # 欧拉函数 phi(998244353)
+
+def qmi(a, k):
+    res = 1
+    a %= MOD
+    while k:
+        if k & 1:
+            res = res * a % MOD
+        a = a * a % MOD
+        k >>= 1
+    return res
+
+def dfs(a, b, c, d):
+    g = math.gcd(a, c)
+    if g == 1:
+        return 1
+    minv = min(b, d)
+    if b <= d:
+        exp = b if b < PHI else b % PHI + PHI
+        return qmi(g, exp) * dfs(a // g, b, g, d - b) % MOD
+    else:
+        exp = d if d < PHI else d % PHI + PHI
+        return qmi(g, exp) * dfs(g, b - d, c // g, d) % MOD
+
+def main():
+    T = int(sys.stdin.readline())
+    for _ in range(T):
+        a, b, c, d = map(int, sys.stdin.readline().split())
+        print(dfs(a, b, c, d))
+
+threading.Thread(target=main).start()
+```
+
+```c++
+#include "bits/stdc++.h"
+using namespace std;
+using ll = long long;
+using lll = __int128;
+#define all(x) (x).begin(),(x).end()
+const ll p = 998244353;
+ll ksm(ll x, lll Y)
+{
+	ll r = 1;
+	x %= p;
+	if (!Y) return 1;
+	if (!x) return 0;
+	ll y = Y % (p - 1);
+	while (y)
+	{
+		if (y & 1) r = r * x % p;
+		x = x * x % p; y >>= 1;
+	}
+	return r;
+}
+ll f(ll a, lll b, ll c, lll d)
+{
+	ll x = gcd(a, c);
+	if (x == 1 || b == 0 || d == 0) return 1;
+	lll ka = 0, kc = 0;
+	while (a % x == 0) a /= x, ++ka;
+	while (c % x == 0) c /= x, ++kc;
+	ka *= b, kc *= d;
+	if (ka > kc) swap(a, c), swap(b, d), swap(ka, kc);
+	return ksm(x, ka) * f(a, b, x, kc - ka) % p;
+}
+int main()
+{
+	ios::sync_with_stdio(0);
+	cin.tie(0);
+	int T;
+	cin >> T;
+	while (T--)
+	{
+		ll a, b, c, d;
+		cin >> a >> b >> c >> d;
+		cout << f(a, b, c, d) << '\n';
+	}
+}
+```
+
+## H 邪教
+
+### H1 哈希状态
+
+```c++
+#include <bits/stdc++.h>
+using namespace std;
+typedef long long ll;
+typedef unsigned long long ull;
+
+int main() {
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+    int t; 
+    cin >> t;
+
+    mt19937_64 rng(random_device{}()); // 64位随机生成器
+
+    while (t--) {
+        int n; 
+        cin >> n;
+        vector<ll> l(n), r(n);
+        vector<ull> w(n);
+        for (int i = 0; i < n; i++) {
+            w[i] = rng(); // 生成随机权值
+        }
+
+        map<ll, ull> event_map; // 记录事件: {坐标, 异或值}
+
+        for (int i = 0; i < n; i++) {
+            cin >> l[i] >> r[i];
+            event_map[l[i]] ^= w[i];          // 在l[i]加入
+            event_map[r[i] + 1] ^= w[i];      // 在r[i]+1移除
+        }
+
+        set<ull> seen = {0}; // 覆盖状态集合，初始化空状态
+        ull cur = 0;         // 当前覆盖状态
+        vector<ll> poses;    // 事件坐标
+        for (auto& p : event_map) {
+            poses.push_back(p.first);
+        }
+        sort(poses.begin(), poses.end()); // 坐标排序
+
+        for (ll pos : poses) {
+            cur ^= event_map[pos];      // 更新当前状态
+            seen.insert(cur);            // 记录新状态
+        }
+
+        cout << seen.size() << '\n';
+    }
+    return 0;
+}
+```
+
+### H2 超绝浮点精度
+
+```python
+from decimal import Decimal, getcontext
+
+getcontext().prec = 200
+
+n, k = map(int, input().split())
+n = Decimal(n)
+k = Decimal(k)
+
+ans1 = Decimal(0)
+for i in range(int(k)):
+    ans1 += k / Decimal(i + 1)
+
+ans2 = k * (Decimal(1) - (Decimal(1) - Decimal(1) / k) ** n)
+
+print(ans1, ans2)
 ```
 

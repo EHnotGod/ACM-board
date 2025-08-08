@@ -1,18 +1,19 @@
 n, q = map(int, input().split())
 
-# 使用欧拉筛（线性筛）来找出所有素数
-vis = [True] * (n + 1)
-prim = []
+v = [0] * (n + 1)
+primes = []
+
 for i in range(2, n + 1):
-    if vis[i]:
-        prim.append(i)
-    for p in prim:
-        if i * p > n:
+    if v[i] == 0:  # i 是素数
+        v[i] = i
+        primes.append(i)
+    for p in primes:
+        m = i * p
+        if m > n:
             break
-        vis[i * p] = False
+        v[m] = p  # 记录最小质因数
         if i % p == 0:
             break
-
 for _ in range(q):
     k = int(input())
-    print(prim[k - 1])
+    print(v[k] if k > 1 else 1)
