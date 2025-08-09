@@ -1,4 +1,4 @@
- # PY / C++ 语法对照
+ # 转生指南——PY / C++ 语法对照
 
 [TOC]
 
@@ -11,6 +11,8 @@
 
 ## 二、输入输出
 
+### 1.基础
+
 | 功能               | Python                                              | C++                                                        | 举例    |
 | ------------------ | --------------------------------------------------- | ---------------------------------------------------------- | ------- |
 | 输入一个整数       | `x = int(input())`                                  | `int x; cin >> x;`                                         | 5       |
@@ -21,6 +23,27 @@
 | 输出一列“ ”整数    | `print(*a)` or <br />`print(" ".join(map(str, a)))` | `for (int i=0; i < n; i++)`<br />`{cout << a[i] << " "; }` | 1 2 3 4 |
 | 输出一列整数       | `print("".join(map(str, a)))`                       | `for (int i=0; i < n; i++)`<br />`{cout << a[i]; }`        | 1234    |
 | 读字符串作数组     | `s = list(input().strip())`                         | `char c6[5];`<br />`scanf("%s",c6);`                       | abcde   |
+
+### 2.特殊
+
+输出固定小数位数：
+
+```c++
+#include<bits/stdc++.h>
+using namespace std;
+int main(){
+    vector<vector<int>> a(3);
+    double pi = 11.4514114514;
+    cout <<setiosflags(ios::fixed)<< setprecision(6) << pi;
+}
+```
+
+```python
+s = 11.4514114514
+print("{:.6f}".format(s))
+```
+
+
 
 ## 三、流程控制
 
@@ -214,7 +237,7 @@ int main() {
 | -------------------- | ------------------------------------------------------------ | -------------------------------------------- |
 | **初始化**           | `multiset<int> ms = {3,1,4,1};`                              | 创建包含重复元素的multiset                   |
 | **插入元素**         | `ms.insert(2);`<br>`ms.insert({5,5,5});`                     | 插入单个或多个元素                           |
-| **删除元素**         | `ms.erase(1);`<br>`ms.erase(ms.find(3));`                    | 删除所有值为1的元素<br>删除第一个值为3的元素 |
+| **删除元素**         | `ms.erase(1);`<br>`ms.erase(ms.find(3));`（find为O(logn)）   | 删除所有值为1的元素<br>删除第一个值为3的元素 |
 | **计数元素**         | `int cnt = ms.count(5);`                                     | 返回值为5的元素个数k，复杂度$ O(k+logn) $    |
 | **边界查找（真神）** | `multiset<int> ms = {1, 2, 3, 3, 3, 4, 5};`<br/>`auto it1 = ms.lower_bound(3);`<br/>`auto it2 = ms.upper_bound(3);`<br/>`cout << "lower_bound(3): " << *it1 << "\n"; // 输出 3`<br/>`cout << "upper_bound(3): " << *it2 << "\n"; // 输出 4` | 第一个≥3的元素<br>第一个>3的元素             |
 | **遍历**             | `for(auto elem : ms)`                                        | 有序遍历所有元素                             |
@@ -225,7 +248,22 @@ s = set()
 s.add((1, 6)) # set里可以塞元组，但是不能塞数组啥的
 ```
 
-
+```c++
+#include <iostream>
+#include <set>
+using namespace std;
+int main(){
+    multiset<int> ms = {1, 1, 4, 5, 1, 4};
+    for (int i = 0; i < 2e5; i++)
+    {
+        ms.insert(i);
+        int mi = *ms.begin();
+        int ma = *ms.rbegin();
+    }
+    
+    
+}
+```
 
 ```c++
 multiset<int, greater<int>> ms = {3, 1, 4, 2, 5, 3}; // 实现逆向排序
@@ -243,7 +281,7 @@ int main() {
 // set里也可以塞pair
 ```
 
-### 4. 优先队列
+### 4. 优先队列(没啥用了，可以被multiset平替)
 
 在py里，优先队列需要使用`import heapq`构建，只有最小堆，底层数据结构依赖为列表，但是可以传入列表，默认按位比较。
 
@@ -426,5 +464,76 @@ int main() {
 | **组合数**               | `math.comb(r, n)`仅限于小一点的数，大数太慢了                | 无                             |
 | **字符串转整数突破上限** | `import sys` <br />`sys.set_int_max_str_digits(100001)`      | 无                             |
 
+角度相关：
+
+```c++
+#include <iostream>
+#include <cmath>
+
+int main() {
+    double radians = M_PI / 4; // 45度对应的弧度
+    std::cout << "sin(π/4): " << std::sin(radians) << std::endl; // 输出 0.707107
+    
+    double degrees = 45.0;
+    double rad = degrees * M_PI / 180.0; // 角度转弧度
+    std::cout << "cos(45°): " << std::cos(rad) << std::endl;
+}
+```
+
+```python
+import math
+
+radians = math.pi / 4  # 45度对应的弧度
+print(math.sin(radians))  # 输出 0.7071067811865476
+
+degrees = 45.0
+rad = math.radians(degrees)  # 角度转弧度（使用内置函数）
+print(math.cos(rad))        # 输出 0.7071067811865476
+
+# 反函数示例
+print(math.degrees(math.asin(0.5)))  # 输出 30.0（弧度转角度）
+```
+
+C++里的角度需要自己计算，所有东西都是弧度制。acos还有asin的精度需要注意，这俩的精度不是很好，能不用就不用。
+
 ## 七、字符串处理
+
+**常用操作**
+
+| 功能                       | Python                     | C++ (std::string)                    |
+| -------------------------- | -------------------------- | ------------------------------------ |
+| **定义**                   | `s = "114514"`<br>`s = ""` | `string s = "Hello";`<br>`string s;` |
+| **输入，遇到空格停下**     | `string s;cin >> s;`       | `s = input()`                        |
+| **字符串连接(不推荐)**     | `s += "a"`                 | `s += "a";`                          |
+| **求长度**                 | `len(s)`                   | `s.length()`                         |
+| **检查存在，没有返回-1**   | `s.find("kl")`             | `int a = s.find("ll");`              |
+| **插入（第四个后面插入）** | `s.insert(4,"a")`          | `s.insert(4,"a")`                    |
+| **修改**                   | `不让修改`                 | `s[1]='a';单引号`                    |
+| **遍历**                   | `for x in s:`              | `for (auto x : s)`                   |
+| **截取**                   | `s = s[1:3]`               | `s = s.substr(1, 2);`                |
+| **反转**                   | `s = s[::-1]`              | `reverse(s.begin(), s.end());`       |
+
+```c++
+// 输入的用法：
+#include<bits/stdc++.h>
+using namespace std;
+int main(){
+    vector<vector<int>> a(3);
+    for (int i = 0; i < 3; i++)
+    {
+        string s;
+        cin >> s;
+        for (auto x : s){
+            a[i].push_back(x - '0');
+        }
+    }
+    for (int i = 0; i < 3; i++)
+    {
+        for (int j = 0; j < a[i].size(); j++){
+            cout << a[i][j] << " ";
+        }
+        cout << "\n";
+    }
+}
+```
 
