@@ -1497,6 +1497,134 @@ int main(){
 
 ## C-数据结构
 
+### C0 树状数组
+
+```c++
+//洛谷P3374
+#include<bits/stdc++.h>
+using namespace std;
+#define endl "\n"
+#define range(i, a, b) for (int i = (a); i < (b); ++i)
+#define lc (p<<1)
+#define rc (p<<1|1)
+#define N 500005
+int n, w[N];
+struct node {
+    int l, r, sum;
+} tr[N * 4];
+
+void build(int p, int l, int r) {
+    tr[p].l = l;
+    tr[p].r = r;
+    tr[p].sum = w[l];
+    if (l == r) return;
+    int m = (l + r) / 2;
+    build(lc, l, m);
+    build(rc, m + 1, r);
+    tr[p].sum = tr[lc].sum + tr[rc].sum;
+}
+
+// 点修改（从根递归进入）
+void update(int p, int x, int k) {
+    if (tr[p].l == x && tr[p].r == x) {
+        tr[p].sum += k;
+        return;
+    }
+    int m = (tr[p].l + tr[p].r) / 2;
+    if (x <= m) update(lc, x, k);
+    else update(rc, x, k);
+    tr[p].sum = tr[lc].sum + tr[rc].sum;
+}
+
+int query(int p, int x, int y) {
+    if (x <= tr[p].l && tr[p].r <= y) return tr[p].sum;
+    int m = (tr[p].l + tr[p].r) / 2;
+    int sum = 0;
+    if (x <= m) sum += query(lc, x, y);
+    if (y > m)  sum += query(rc, x, y);
+    return sum;
+}
+int main(){
+    ios::sync_with_stdio(0);
+    cin.tie(0);
+    cout.tie(0);
+    int n, m;
+    cin >> n >> m;
+    range(i, 0, n){
+        cin >> w[i + 1];
+    }
+    build(1, 1, n);
+    range(i, 0, m){
+        int op; cin >> op;
+        int x, y, k;
+        if (op == 1){
+            cin >> x >> k;  // 单点更新
+            update(1, x, k);
+        }
+        else{
+            cin >> x >> y;  // 区间查询
+            cout << query(1, x, y) << endl;
+        }
+    }
+}
+```
+
+```python
+import sys
+input = sys.stdin.readline
+sys.setrecursionlimit(10 ** 6)
+
+class Node():
+    def __init__(self, l, r, he):
+        self.l = l
+        self.r = r
+        self.he = he
+
+def build(p, l, r):
+    tr[p] = Node(l, r, 0)
+    if l == r:
+        tr[p].he = w[l]
+        return
+    m = (l + r) // 2
+    build(p * 2, l, m)
+    build(p * 2 + 1, m + 1, r)
+    tr[p].he = tr[p * 2].he + tr[p * 2 + 1].he
+
+def update(p, idx, k):
+    if tr[p].l == idx and tr[p].r == idx:
+        tr[p].he += k
+        return
+    m = (tr[p].l + tr[p].r) // 2
+    if idx <= m:
+        update(p * 2, idx, k)
+    if idx > m:
+        update(p * 2 + 1, idx, k)
+    tr[p].he = tr[p * 2].he + tr[p * 2 + 1].he
+
+def query(p, l, r):
+    if tr[p].l >= l and tr[p].r <= r:
+        return tr[p].he
+    m = (tr[p].l + tr[p].r) // 2
+    he = 0
+    if l <= m:
+        he += query(p * 2, l, r)
+    if r > m:
+        he += query(p * 2 + 1, l, r)
+    return he
+
+n, m = map(int, input().split())
+w = list(map(int, input().split()))
+N = n * 4 + 1
+tr = [Node(0, 0, 0) for _ in range(N * 4)]
+build(1, 0, n - 1)
+for i in range(m):
+    tmp = list(map(int, input().split()))
+    if tmp[0] == 2:
+        print(query(1, tmp[1] - 1, tmp[2] - 1))
+    else:
+        update(1, tmp[1] - 1, tmp[2])
+```
+
 ### C1 并查集
 
 ```python
@@ -1692,6 +1820,211 @@ int main(){
     else cin>>k,change(1,x,y,k);
   }
   return 0;
+}
+```
+
+### C2.5 加乘线段树
+
+```c++
+// 洛谷P3373
+#include <cstring>
+#include <iostream>
+#include <algorithm>
+using namespace std;
+
+#define N 100005
+#define LL long long
+#define int long long
+#define lc u<<1
+#define rc u<<1|1
+LL w[N];
+LL n,m,op,x,y,k,mod;
+struct Tree{ //线段树
+  LL l,r,sum,add,mul;
+}tr[N*4];
+
+inline LL len(int u) { return tr[u].r - tr[u].l + 1; }
+
+void pushup(int u) {
+  tr[u].sum = (tr[lc].sum + tr[rc].sum) % mod;
+}
+
+void apply_mul_add_to_node(int u, LL mulv, LL addv) {
+  mulv %= mod; if (mulv < 0) mulv += mod;
+  addv %= mod; if (addv < 0) addv += mod;
+  tr[u].sum = ( (tr[u].sum * mulv) % mod + (addv * (len(u) % mod)) % mod ) % mod;
+  tr[u].mul = (tr[u].mul * mulv) % mod;
+  tr[u].add = (tr[u].add * mulv + addv) % mod;
+}
+
+void pushdown(int u) {
+  if (tr[u].mul != 1 || tr[u].add != 0) {
+    apply_mul_add_to_node(lc, tr[u].mul, tr[u].add);
+    apply_mul_add_to_node(rc, tr[u].mul, tr[u].add);
+    tr[u].mul = 1;
+    tr[u].add = 0;
+  }
+}
+void build(LL u,LL l,LL r){ //建树
+  tr[u]={l,r,w[l],0,1};
+  if(l==r) return;
+  LL m=l+r>>1;
+  build(lc,l,m);
+  build(rc,m+1,r);
+  pushup(u);
+}
+void change(LL u,LL l,LL r,LL k){ //区修
+  if(l<=tr[u].l&&tr[u].r<=r){
+    apply_mul_add_to_node(u, 1, k);
+    return;
+  }
+  LL m=tr[u].l+tr[u].r>>1;
+  pushdown(u);
+  if(l<=m) change(lc,l,r,k);
+  if(r>m) change(rc,l,r,k);
+  pushup(u);
+}
+void change2(LL u,LL l,LL r,LL k){ //区修
+  if(l<=tr[u].l&&tr[u].r<=r){
+    apply_mul_add_to_node(u, k, 0);
+    return;
+  }
+  LL m=tr[u].l+tr[u].r>>1;
+  pushdown(u);
+  if(l<=m) change2(lc,l,r,k);
+  if(r>m) change2(rc,l,r,k);
+  pushup(u);
+}
+LL query(LL u,LL l,LL r){ //区查
+  if(l<=tr[u].l && tr[u].r<=r) return tr[u].sum % mod;
+  LL m=tr[u].l+tr[u].r>>1;
+  pushdown(u);
+  LL sum=0;
+  if(l<=m) {
+    sum+=query(lc,l,r);
+    sum %= mod;
+  }
+  if(r>m) {
+    sum+=query(rc,l,r);
+    sum %= mod;
+  }
+  return sum;
+}
+signed main(){
+  cin>>n>>m>>mod;
+  for(int i=1; i<=n; i ++) cin>>w[i];
+  build(1,1,n);
+  while(m--){
+    cin>>op>>x>>y;
+    if(op==3)cout<<query(1,x,y)<<endl;
+    else if (op == 2){
+      cin>>k;change(1,x,y,k);
+    }
+    else{
+      cin>>k;change2(1,x,y,k);
+    }
+  }
+  return 0;
+}
+```
+
+### C2.8 最大子段和线段树
+
+```c++
+//洛谷P4513
+
+#include<bits/stdc++.h>
+#define int long long
+using namespace std;
+#define endl "\n"
+#define range(i, a, b) for (int i = (a); i < (b); ++i)
+
+#define lc 2*p
+#define rc 2*p+1
+#define N 500005
+
+int w[N];
+
+struct node {
+    int l, r, sum, ansl, ansr, ans;
+} tr[N * 4];
+void merge(int p){
+    tr[p].sum = tr[lc].sum + tr[rc].sum;
+    tr[p].ans = max(tr[lc].ans, max(tr[rc].ans, tr[rc].ansl + tr[lc].ansr));
+    tr[p].ansl = max(tr[lc].sum + tr[rc].ansl, tr[lc].ansl);
+    tr[p].ansr = max(tr[rc].sum + tr[lc].ansr, tr[rc].ansr);
+}
+void build(int p, int l, int r) {
+    tr[p].l = l; tr[p].r = r;
+    if (l == r) {
+        tr[p].sum = w[l];
+        tr[p].ansl = tr[p].ansr = tr[p].ans = w[l];
+        return;
+    }
+    int m = (l + r) / 2;
+    build(lc, l, m);
+    build(rc, m + 1, r);
+    merge(p);
+}
+void update(int p, int x, int k) {
+    if (tr[p].l == x && tr[p].r == x) {
+        tr[p].sum = k;
+        tr[p].ansl = k;
+        tr[p].ansr = k;
+        tr[p].ans = k;
+        return;
+    }
+    int m = (tr[p].l + tr[p].r) / 2;
+    if (x <= m) update(lc, x, k);
+    else update(rc, x, k);
+    merge(p);
+}
+
+node query(int p, int x, int y) {
+    if (x <= tr[p].l && tr[p].r <= y) return tr[p];
+    int m = (tr[p].l + tr[p].r) / 2;
+    if (y <= m){
+        return query(lc, x, y);
+    } 
+    else if (x > m) {
+        return query(rc, x, y);
+    }
+    else{
+        node t, a = query(lc, x, y), b = query(rc, x, y);
+        t.sum = a.sum + b.sum;
+        t.ansl = max(a.ansl, a.sum + b.ansl);
+        t.ansr = max(b.ansr, b.sum + a.ansr);
+        t.ans = max({a.ans, b.ans, a.ansr + b.ansl});
+        return t;
+    }
+}
+signed main(){
+    ios::sync_with_stdio(0);
+    cin.tie(0);
+    cout.tie(0);
+    int n, m;
+    cin >> n >> m;
+    range(i, 0, n){
+        cin >> w[i + 1];
+    }
+    build(1, 1, n);
+    range(i, 0, m){
+        int op; cin >> op;
+        int x, y, k;
+        if (op == 2){
+            cin >> x >> k;
+            update(1, x, k);
+        }
+        else{
+            cin >> x >> y;
+            if (x > y){
+                cout << query(1, y, x).ans << endl;
+            }
+            else{
+                cout << query(1, x, y).ans << endl;
+            }
+        }
+    }
 }
 ```
 
@@ -3311,6 +3644,129 @@ int main(){
 }
 ```
 
+### D12 重链剖分+线段树
+
+```c++
+// 树链剖分 O(mlognlogn)
+#include<bits/stdc++.h>
+using namespace std;
+
+#define int long long
+const int N=100010;
+int n,m,root,P,w[N],a,b,c,t;
+vector<int> e[N];
+int fa[N],dep[N],siz[N],son[N];
+int top[N],id[N],nw[N],cnt; //树链
+
+#define lc u<<1
+#define rc u<<1|1
+struct tree{
+  int l,r; 
+  int sum,add;
+}tr[N*4]; //线段树
+
+void dfs1(int u,int f){ //搞fa,dep,siz,son
+  fa[u]=f,dep[u]=dep[f]+1,siz[u]=1;
+  for(int v:e[u]){
+    if(v==f) continue;
+    dfs1(v,u);
+    siz[u]+=siz[v];
+    if(siz[son[u]]<siz[v]) son[u]=v; 
+  }
+}
+void dfs2(int u,int tp){ //搞top,id,nw
+  top[u]=tp,id[u]=++cnt,nw[cnt]=w[u];
+  if(son[u]) dfs2(son[u],tp);
+  for(int v:e[u]){
+    if(v==fa[u]||v==son[u])continue;
+    dfs2(v,v);
+  }
+}
+
+void pushup(int u){
+  tr[u].sum=tr[lc].sum+tr[rc].sum;
+}
+void pushdown(int u){
+  if(tr[u].add){
+    tr[lc].sum+=tr[u].add*(tr[lc].r-tr[lc].l+1);
+    tr[rc].sum+=tr[u].add*(tr[rc].r-tr[rc].l+1);
+    tr[lc].add+=tr[u].add;
+    tr[rc].add+=tr[u].add;
+    tr[u].add=0;
+  }
+}
+void build(int u,int l,int r){ //构建线段树
+  tr[u]={l,r,nw[l],0};
+  if(l==r) return;
+  int mid=l+r>>1;
+  build(lc,l,mid);
+  build(rc,mid+1,r);
+  pushup(u);
+}
+void change(int u,int x,int y,int k){ //线段树修改
+  if(x>tr[u].r||y<tr[u].l) return;
+  if(x<=tr[u].l&&tr[u].r<=y){
+    tr[u].sum+=k*(tr[u].r-tr[u].l+1);
+    tr[u].add+=k;
+    return;
+  }
+  pushdown(u);
+  change(lc,x,y,k);
+  change(rc,x,y,k);
+  pushup(u);
+}
+void change_path(int u,int v,int k){ //修改路径
+  while(top[u]!=top[v]){
+    if(dep[top[u]]<dep[top[v]]) swap(u,v);
+    change(1,id[top[u]],id[u],k);
+    u=fa[top[u]];
+  }
+  if(dep[u]<dep[v]) swap(u,v);
+  change(1,id[v],id[u],k); //最后一段
+}
+void change_tree(int u,int k){ //修改子树
+  change(1,id[u],id[u]+siz[u]-1,k);
+}
+int query(int u,int x,int y){ //线段树查询
+  if(x>tr[u].r||y<tr[u].l) return 0;
+  if(x<=tr[u].l&&tr[u].r<=y) return tr[u].sum;
+  pushdown(u);
+  return query(lc,x,y)+query(rc,x,y);
+}
+int query_path(int u,int v){ //查询路径
+  int res=0;
+  while(top[u]!=top[v]){
+    if(dep[top[u]]<dep[top[v]]) swap(u,v);
+    res+=query(1,id[top[u]],id[u]);
+    u=fa[top[u]];
+  }
+  if(dep[u]<dep[v]) swap(u,v);
+  res+=query(1,id[v],id[u]); //最后一段
+  return res;
+}
+int query_tree(int u){ //查询子树
+  return query(1,id[u],id[u]+siz[u]-1);
+}
+signed main(){
+  ios::sync_with_stdio(0),cin.tie(0),cout.tie(0);
+  cin>>n>>m>>root>>P;
+  for(int i=1; i<=n; i++) cin>>w[i];
+  for(int i=0; i<n-1; i++){
+    cin>>a>>b;
+    e[a].push_back(b); e[b].push_back(a);
+  }
+  dfs1(root,0); dfs2(root,root); //把树拆成链
+  build(1,1,n);  //用链建线段树
+  while(m--){
+    cin>>t>>a;
+    if(t==1) cin>>b>>c,change_path(a,b,c);
+    else if(t==3) cin>>c,change_tree(a,c);
+    else if(t==2) cin>>b,cout<<query_path(a,b)%P<<"\n";
+    else cout<<query_tree(a)%P<<"\n";
+  }
+}
+```
+
 ### D13 LCA应用-树上距离
 
 ```python
@@ -3429,6 +3885,265 @@ int main(){
   return 0;
 }
 ```
+
+### D14 强连通分量-Tarjan算法
+
+```c++
+// Tarjan算法 O(n+m)
+#include<bits/stdc++.h>
+using namespace std;
+
+const int N=10010;
+int n,m,a,b,ans;
+vector<int> e[N]; 
+int dfn[N],low[N],tim,stk[N],ins[N],top,scc[N],siz[N],cnt;
+
+void tarjan(int x){
+  dfn[x]=low[x]=++tim; //时间戳 追溯值
+  stk[++top]=x,ins[x]=1;
+  for(int y:e[x]){
+    if(!dfn[y]){ //若y尚未访问
+      tarjan(y);
+      low[x]=min(low[x],low[y]); //因y是儿子
+    }
+    else if(ins[y]) //若y已访问且在栈中
+      low[x]=min(low[x],dfn[y]); //因y是祖先或左子树点
+  }
+
+  if(dfn[x]==low[x]){ //若x是SCC的根
+    ++cnt;
+    while(1){
+      int y=stk[top--]; ins[y]=0;
+      scc[y]=cnt; //SCC的编号
+      ++siz[cnt]; //SCC的大小
+      if(y==x) break;
+    }
+  }
+}
+int main(){
+  ios::sync_with_stdio(0),cin.tie(0),cout.tie(0);
+  cin>>n>>m;
+  while(m--)
+    cin>>a>>b, e[a].push_back(b);
+  for(int i=1;i<=n;i++) //可能不连通
+    if(!dfn[i]) tarjan(i);
+  for(int i=1;i<=cnt;i++)
+     if(siz[i]>1) ans++;
+  cout<<ans;
+}
+```
+
+### D15 Tarjan SCC缩点
+
+```c++
+#include<bits/stdc++.h>
+using namespace std;
+
+const int N=100010;
+int n,m,a,b;
+vector<int> e[N],ne[N]; 
+int dfn[N],low[N],tim,stk[N],top,scc[N],cnt;
+int w[N],nw[N],d[N];
+
+void tarjan(int x){
+  dfn[x]=low[x]=++tim; 
+  stk[++top]=x;
+  for(int y : e[x]){
+    if(!dfn[y]){
+      tarjan(y);
+      low[x]=min(low[x],low[y]); 
+    }
+    else if(!scc[y])
+      low[x]=min(low[x],dfn[y]);
+  }
+  if(dfn[x]==low[x]){
+    ++cnt;
+    while(1){
+      int y=stk[top--];
+      scc[y]=cnt;
+      if(y==x) break;
+    }
+  }
+}
+int main(){
+  cin>>n>>m;
+  for(int i=1;i<=n;i++) cin>>w[i];
+  for(int i=1;i<=m;i++){
+    cin>>a>>b;
+    e[a].push_back(b);
+  }
+  
+  for(int i=1;i<=n;i++) //缩点
+    if(!dfn[i]) tarjan(i); 
+  for(int x=1;x<=n;x++){ //建拓扑图
+    nw[scc[x]]+=w[x];
+    for(int y:e[x])
+      if(scc[x]!=scc[y]) ne[scc[x]].push_back(scc[y]);
+  } 
+  for(int x=cnt;x;x--){ //求最长路
+    if(d[x]==0) d[x]=nw[x]; //起点
+    for(int y:ne[x])
+      d[y]=max(d[y],d[x]+nw[y]);
+  } 
+  int ans=0;
+  for(int i=1;i<=cnt;i++) ans=max(ans,d[i]);
+  cout<<ans;
+}
+```
+
+### D16 Tarjan割点
+
+```c++
+#include<bits/stdc++.h>
+using namespace std;
+
+const int N=20010;
+int n,m,a,b;
+vector<int> e[N];
+int dfn[N],low[N],tim,cut[N],root;
+
+void tarjan(int x){
+  dfn[x]=low[x]=++tim;
+  int son=0; //x的儿子个数
+  for(int y:e[x]){
+    if(!dfn[y]){ //若y未访问
+      tarjan(y);
+      low[x]=min(low[x],low[y]); 
+      if(low[y]>=dfn[x]){
+        son++;
+        if(x!=root||son>1) cut[x]=1;
+      }
+    }
+    else //若y已访问
+      low[x]=min(low[x],dfn[y]); //注:dfn不能换成low
+  }
+}
+int main(){
+  cin>>n>>m;
+  while(m --){
+    cin>>a>>b;
+    e[a].push_back(b),
+    e[b].push_back(a);
+  }
+  for(root=1;root<=n;root++) if(!dfn[root]) tarjan(root);
+  
+  int ans=0;
+  for(int i=1;i<=n;i++) if(cut[i]) ans++;
+  cout<<ans<<"\n";
+  for(int i=1;i<=n;i++) if(cut[i]) cout<<i<<" ";
+}
+```
+
+### D17 Tarjan割边
+
+```c++
+#include<bits/stdc++.h>
+using namespace std;
+
+const int N=210,M=10010;
+int n,m,a,b;
+int h[N],to[M],ne[M],idx=1; //从2,3开始配对
+void add(int a,int b){
+  to[++idx]=b;ne[idx]=h[a];h[a]=idx;
+}
+int dfn[N],low[N],tim,cnt;
+struct bridge{
+  int x,y;
+  bool operator<(const bridge &t)const{
+    if(x==t.x) return y<t.y;
+    return x<t.x;
+  }
+}bri[M]; //割边
+
+void tarjan(int x,int ine){
+  dfn[x]=low[x]=++tim;
+  for(int i=h[x];i;i=ne[i]){
+    int y=to[i];
+    if(!dfn[y]){ //若y未访问
+      tarjan(y,i);
+      low[x]=min(low[x],low[y]);
+      if(low[y]>dfn[x]) bri[cnt++]={x,y};
+    }
+    else if(i!=(ine^1)) //若y已访问且不是反边
+      low[x]=min(low[x],dfn[y]);
+  }
+}
+int main(){
+  cin>>n>>m;
+  while(m--){
+    cin>>a>>b;
+    add(a,b),add(b,a);
+  }
+  for(int i=1;i<=n;i++) if(!dfn[i])tarjan(i,0);
+  sort(bri,bri+cnt);
+  for(int i=0;i<cnt;i++)
+    cout<<bri[i].x<<" "<<bri[i].y<<"\n";
+}
+```
+
+### D47 树的直径
+
+```c++
+// 树的直径 正边权 两次DFS O(n)
+#include<bits/stdc++.h>
+using namespace std;
+
+const int N=100005;
+int n,rt,d[N];
+vector<pair<int,int>> e[N];
+
+void dfs(int u,int fa){
+  if(d[rt]<d[u]) rt=u; //记录最远点
+  for(auto [v,w]:e[u]){
+    if(v==fa) continue;
+    d[v]=d[u]+w; //d[v]从根走到v的距离
+    dfs(v,u);
+  }
+}
+int main(){
+  cin>>n;
+  for(int i=1,x,y;i<n;i++){
+    cin>>x>>y;
+    e[x].emplace_back(y,1);
+    e[y].emplace_back(x,1);
+  }
+  dfs(1,0);  //找出离1最远的点rt
+  d[rt]=0;
+  dfs(rt,0); //找出离rt最远的点
+  cout<<d[rt];
+}
+```
+
+```c++
+// 树的直径 正负边权 树形DP O(n)
+#include<bits/stdc++.h>
+using namespace std;
+
+const int N=100005;
+int n,mxd,d[N]; //d[u]从u点向下走的最长距离
+vector<pair<int,int>> e[N];
+
+void dfs(int u,int fa){
+  for(auto [v,w]:e[u]){
+    if(v==fa) continue;
+    dfs(v,u);
+    mxd=max(mxd,d[u]+w+d[v]); //拼凑直径
+    d[u]=max(d[u],d[v]+w);    //更新d[u]
+  }
+}
+int main(){
+  cin>>n;
+  for(int i=1,x,y;i<n;i++){
+    cin>>x>>y;
+    e[x].emplace_back(y,1);
+    e[y].emplace_back(x,1);
+  }
+  dfs(1,0);
+  cout<<mxd;
+}
+```
+
+
 
 ------
 
@@ -3843,6 +4558,92 @@ int main(){
 }
 ```
 
+### E14 混合背包
+
+```c++
+#include <iostream>
+using namespace std;
+
+int f[1010];
+
+int main(){
+  int n, m, v, w, s;
+  scanf("%d %d", &n, &m);
+  for(int i=1; i<=n; i++){  //枚举物品种类
+    scanf("%d%d%d",&v,&w,&s);
+    if(s!=0){               //01背包或多重背包
+      if(s==-1) s=1;                
+      int num=min(s,m/v);
+      for(int k=1; num>0; k<<=1){
+        if(k>num) k=num;
+        num-=k;
+        for(int j=m; j>=v*k; j--)
+          f[j]=max(f[j],f[j-v*k]+w*k);
+      }
+    }
+    else{                   //完全背包
+      for(int j=v; j<=m; j++)
+        f[j]=max(f[j],f[j-v]+w);
+    }
+  }
+  printf("%d\n", f[m]);
+}
+```
+
+### E15 二维背包
+
+```c++
+//二维费用 01背包
+#include <iostream>
+using namespace std;
+
+int f[110][110];
+// f[j,k]:前i个物品，体积≤j，重量≤k 的最大价值
+
+int main(){
+  int n, V, W;    //物品 容量 承重
+  int v, w, val;  //体积 重量 价值
+  cin>>n>>V>>W;
+  for(int i=1; i<=n; i++){  //物品 
+    cin>>v>>w>>val;
+    for(int j=V; j>=v; j--) //体积
+    for(int k=W; k>=w; k--) //重量
+      f[j][k]=max(f[j][k],f[j-v][k-w]+val);
+  }
+  cout<<f[V][W];
+}
+```
+
+### E16 分组背包
+
+```c++
+// 分组背包 朴素算法
+#include<iostream>
+#include<cstring>
+using namespace std;
+
+const int N=110;
+int v[N][N],w[N][N],s[N];
+// v[i,j]:第i组第j个物品的体积 s[i]:第i组物品的个数
+int f[N][N];
+// f[i,j]:前i组物品，能放入容量为j的背包的最大值
+
+int main(){    
+  int n,V; cin>>n>>V;
+  for(int i=1;i<=n;i++){
+    cin>>s[i];
+    for(int j=1;j<=s[i];j++) cin>>v[i][j]>>w[i][j];
+  }
+  
+  for(int i=1;i<=n;i++)     //物品组
+  for(int j=1;j<=V;j++)     //体积
+  for(int k=0;k<=s[i];k++)  //同组内的物品只能选一个
+    if(j>=v[i][k]) f[i][j]=max(f[i][j],f[i-1][j-v[i][k]]+w[i][k]);                 
+
+  cout<<f[n][V];
+}
+```
+
 ### E17 树形DP
 
 ```python
@@ -3920,6 +4721,71 @@ int main(){
   cout<<max(f[root][0],f[root][1]);
 }
 ```
+
+### E32 树的重心
+
+```c++
+// 树的重心 树形DP O(n)
+#include<bits/stdc++.h>
+using namespace std;
+
+const int N=50010;
+int n,siz[N],f[N],cnt=1e9;
+vector<int> e[N],g;
+
+void dfs(int u,int fa){
+  siz[u]=1;
+  for(auto v:e[u]){
+    if(v==fa) continue;
+    dfs(v,u);
+    f[u]=max(f[u],siz[v]); //u的最大子树
+    siz[u]+=siz[v];
+  }
+  f[u]=max(f[u],n-siz[u]); //删除u后的最大连通块
+  cnt=min(cnt,f[u]);       //最大块最小化
+}
+int main(){
+  scanf("%d",&n);
+  for(int i=1,a,b;i<n;i++){
+    scanf("%d%d",&a,&b);
+    e[a].push_back(b);
+    e[b].push_back(a);
+  }
+  dfs(1,0);
+  for(int i=1;i<=n;i++) if(f[i]==cnt) g.push_back(i);
+  for(int v:g) printf("%d ",v);
+}
+```
+
+```python
+import sys
+sys.setrecursionlimit(100000)
+input = sys.stdin.readline
+n = int(input())
+e = [[] for i in range(n + 1)]
+for i in range(n - 1):
+    u, v = map(int, input().split())
+    e[u].append(v); e[v].append(u)
+siz = [0] * (n + 1)
+f = [0] * (n + 1)
+cnt = int(1e9)
+def dfs(u, p):
+    global cnt
+    siz[u] = 1
+    for v in e[u]:
+        if v != p:
+            dfs(v, u)
+            siz[u] += siz[v]
+            f[u] = max(f[u], siz[v])
+    f[u] = max(f[u], n - siz[u])
+    cnt = min(cnt, f[u])
+dfs(1, 0)
+for i in range(1, n + 1):
+    if f[i] == cnt:
+        print(i, end = " ")
+```
+
+
 
 ------
 
@@ -5009,7 +5875,7 @@ int main(){
 
 同上
 
-### G33 整出分块
+### G33 整除分块
 
 同上
 
@@ -5067,6 +5933,58 @@ int main(){
 }
 ```
 
+### G43 NTT-多项式乘法
+
+```c++
+// 迭代版 1.5s
+#include <iostream>
+#include <cstring>
+#include <algorithm>
+#include <cmath>
+#define LL long long
+using namespace std;
+const int N=4e6;
+const int g=3,P=998244353;
+int n,m,R[N],gi,ni;
+LL A[N],B[N];
+
+LL qpow(LL a,LL b){
+  LL ans=1;
+  for(;b; a=a*a%P,b>>=1)
+    if(b&1) ans=ans*a%P;
+  return ans;
+}
+void NTT(LL A[],int n,int op){
+  for(int i=0; i<n; ++i)
+    R[i]=R[i/2]/2+((i&1)?n/2:0);      
+  for(int i=0; i<n; ++i)
+    if(i<R[i]) swap(A[i],A[R[i]]);
+  for(int i=2; i<=n; i<<=1){
+    LL g1=qpow(op==1?g:gi,(P-1)/i);
+    for(int j=0; j<n; j+=i){
+      LL gk=1;
+      for(int k=j; k<j+i/2; ++k){
+        LL x=A[k], y=gk*A[k+i/2]%P;
+        A[k]=(x+y)%P;A[k+i/2]=(x-y+P)%P;
+        gk=gk*g1%P;
+      }
+    }
+  }
+}
+int main(){
+  scanf("%d%d",&n,&m);
+  for(int i=0;i<=n;++i)scanf("%lld",A+i);
+  for(int i=0;i<=m;++i)scanf("%lld",B+i);
+  for(m=n+m,n=1; n<=m; n<<=1);
+  gi=qpow(g,P-2); ni=qpow(n,P-2);
+  NTT(A,n,1); NTT(B,n,1);
+  for(int i=0;i<n;++i)A[i]=A[i]*B[i]%P;
+  NTT(A,n,-1);
+  for(int i=0;i<=m;++i)
+    printf("%d ",A[i]*ni%P);
+}
+```
+
 ### G45+G46 第一、二类斯特林数
 
 无。（递推还要我写？）
@@ -5111,25 +6029,24 @@ double angle(Point a, Point b) { // 求夹角
 ### G50 P点在不在多边形内部
 
 ```c++
-bool pointInPolygon(const vector<Point>& poly, const Point& P) {
+struct Point {
+    long long x, y;
+};
+
+__int128 cross(const Point& A, const Point& B, const Point& C) {
+    return (__int128)(B.x - A.x) * (C.y - A.y) - (__int128)(B.y - A.y) * (C.x - A.x);
+}
+
+bool pointInConvexPolygon(const vector<Point>& poly, const Point& P) {
     int n = poly.size();
-    bool inside = false;
-    for (int i = 0, j = n - 1; i < n; j = i++) {
-        const Point &A = poly[i], &B = poly[j];
-        double cross = (B.x - A.x) * (P.y - A.y) - (B.y - A.y) * (P.x - A.x);
-        if (fabs(cross) < 1e-9) {
- 
-            if (min(A.x,B.x) - 1e-9 <= P.x && P.x <= max(A.x,B.x) + 1e-9 &&
-                min(A.y,B.y) - 1e-9 <= P.y && P.y <= max(A.y,B.y) + 1e-9) {
-                return true;
-            }
-        }
-        bool cond1 = (A.y > P.y) != (B.y > P.y);
-        double xinters = A.x + (P.y - A.y) * (B.x - A.x) / (B.y - A.y);
-        if (cond1 && xinters > P.x)
-            inside = !inside;
+    int sign = 0;
+    for (int i = 0; i < n; i++) {
+        __int128 c = cross(poly[i], poly[(i+1)%n], P);
+        if (c == 0) continue;              // 在边上也算 inside
+        if (sign == 0) sign = (c > 0 ? 1 : -1);
+        else if ((c > 0) != (sign > 0)) return false;
     }
-    return inside;
+    return true;
 }
 ```
 
@@ -5392,5 +6309,139 @@ for i in range(int(k)):
 ans2 = k * (Decimal(1) - (Decimal(1) - Decimal(1) / k) ** n)
 
 print(ans1, ans2)
+```
+
+## I 典题
+
+### I1 共同上升
+
+```python
+#*EHnotgod*————
+#..............#######.....#.....#..............
+#..............#...........#.....#..............
+#..............#######.....#######..............
+#..............#...........#.....#..............
+#..............#######.....#.....#..............
+import sys
+input = sys.stdin.readline
+t = int(input())
+for _ in range(t):
+    n, m = map(int, input().split())
+    a = list(map(int, input().split()))
+    mama = max(a) # 瓦
+    echou = 114514 ** 6; ans = echou
+    if m == 1:
+        for ma in range(mama, mama + 50):
+            anss = 0; b = [0];
+            for i in range(n):
+                b.append(ma - a[i])
+            for i in range(1, n + 1):
+                anss += max(0, b[i] - b[i - 1])
+            ans = min(ans, anss)
+        print(ans)
+    else:
+        for ma in range(mama, mama + 50):
+            for k in range(ma + 50):
+                dp = [[0 for j in range(2)] for i in range(n + 1)]
+                xiao = 0; da = 0
+                for i in range(n):
+                    dp[i + 1][0] = echou
+                    if a[i] <= k:
+                        p1 = max(0, k - a[i] - xiao)
+                        p2 = max(0, k - a[i] - da)
+                        dp[i + 1][0] = min(p1 + dp[i][0], p2 + dp[i][1])
+                    p3 = max(0, ma - a[i] - xiao)
+                    p4 = max(0, ma - a[i] - da)
+                    dp[i + 1][1] = min(p3 + dp[i][0], p4 + dp[i][1])
+                    xiao = k - a[i]; da = ma - a[i]
+                ans = min(ans, min(dp[n]))
+        print(ans)
+```
+
+### I2 反转字符串
+
+```python
+import sys
+input = sys.stdin.readline
+
+t = int(input())
+for _ in range(t):
+    s = list(map(int, input().strip()))
+    n = len(s); new = []
+    for i in range(n):
+        if s[i] != 2:
+            new.append(((i + 1) % 2) ^ s[i])
+        else:
+            new.append(s[i])
+    c0 = new.count(0); c1 = new.count(1); c2 = new.count(2)
+    A = abs(c0 - c1)
+    if c2 < A:
+        ans = A - c2
+    else:
+        ans = (c2 - A) % 2
+    print(ans)
+```
+
+### I3 百慕大三角
+
+```python
+import math
+def exgcd(a, b):
+    if b == 0:
+        return a, 1, 0
+    d, x1, y1 = exgcd(b, a % b)
+    x = y1
+    y = x1 - a // b * y1
+    return d, x, y
+def EXCRT(m, r):
+    m1 = m[1]
+    r1 = r[1]
+    for i in range(2, n + 1):
+        m2 = m[i]
+        r2 = r[i]
+        d, p, q = exgcd(m1, m2)
+        # 不可整除则无解
+        if (r2 - r1) % d != 0:
+            return -1
+        # 求一个特解并取模
+        p = p * ((r2 - r1) // d)
+        p = p % (m2 // d)
+        r1 = m1 * p + r1
+        m1 = m1 * (m2 // d)
+    return r1 % m1
+
+T = int(input())
+for _ in range(T):
+    nn, x, y, vx, vy = map(int, input().split())
+    gg = math.gcd(vx, vy)
+    vx //= gg; vy //= gg
+    g1 = exgcd(vx, nn)[0]
+    if x % g1 != 0:
+        print(-1); continue
+    vxp = vx // g1; n1 = nn // g1; xp = x // g1
+    inv_vxp = exgcd(vxp, n1)[1]
+    r1 = (-xp * inv_vxp) % n1
+
+    g2, _, _ = exgcd(vy, nn)
+    if y % g2 != 0:
+        print(-1); continue
+    vyp = vy // g2; n2 = nn // g2; yp = y // g2
+    inv_vyp = exgcd(vyp, n2)[1]
+    r2 = (-yp * inv_vyp) % n2
+    n = 2
+    m = [0, n1, n2]
+    r = [0, r1, r2]
+    t = EXCRT(m, r)
+    if t == -1:
+        print(-1)
+        continue
+    tx = (t * vx + x) // nn
+    ty = (t * vy + y) // nn
+    # print(tx, ty)
+    ans = 0
+    ans += tx - 1; ans += ty - 1
+    ans += (tx + ty) // 2
+    ans += abs(tx - ty) // 2
+    print(ans)
 ```
 
