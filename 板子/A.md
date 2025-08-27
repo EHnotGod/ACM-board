@@ -2444,6 +2444,167 @@ int main(){
 }
 ```
 
+### C13 树上点分治
+
+py代码还没有，还不怎么会。
+
+```c++
+#include<iostream>
+#include<algorithm>
+using namespace std;
+
+const int N=10005;
+const int INF=10000005;
+struct node{int v,w,ne;}e[N<<1];
+int h[N],idx; //加边
+int del[N],siz[N],mxs,sum,root;//求根
+int dis[N],d[N],cnt; //求距离
+int ans[N],q[INF],judge[INF];//求路径
+int n,m,ask[N];
+
+void add(int u,int v,int w){
+  e[++idx].v=v; e[idx].w=w;  
+  e[idx].ne=h[u]; h[u]=idx;
+}
+void getroot(int u,int fa){
+  siz[u]=1; 
+  int s=0;
+  for(int i=h[u];i;i=e[i].ne){
+    int v=e[i].v;
+    if(v==fa||del[v])continue;
+    getroot(v,u);
+    siz[u]+=siz[v];
+    s=max(s,siz[v]);
+  }
+  s=max(s,sum-siz[u]);
+  if(s<mxs) mxs=s, root=u;
+}
+void getdis(int u,int fa){
+  dis[++cnt]=d[u];
+  for(int i=h[u];i;i=e[i].ne){
+    int v=e[i].v;
+    if(v==fa||del[v])continue;
+    d[v]=d[u]+e[i].w;
+    getdis(v,u);
+  }
+}
+void calc(int u){
+  judge[0]=1;
+  int p=0;
+  // 计算经过根u的路径
+  for(int i=h[u];i;i=e[i].ne){
+    int v=e[i].v;
+    if(del[v])continue;
+    // 求出子树v的各点到u的距离
+    cnt=0; 
+    d[v]=e[i].w;
+    getdis(v,u); 
+    // 枚举距离和询问，判定答案
+    for(int j=1;j<=cnt;++j)
+      for(int k=1;k<=m;++k)
+        if(ask[k]>=dis[j])
+          ans[k]|=judge[ask[k]-dis[j]];
+    // 记录合法距离      
+    for(int j=1;j<=cnt;++j)
+      if(dis[j]<INF)
+        q[++p]=dis[j], judge[q[p]]=1;
+  }
+  // 清空距离数组
+  for(int i=1;i<=p;++i) judge[q[i]]=0;  
+}
+void divide(int u){
+  // 计算经过根u的路径
+  calc(u); 
+  // 对u的子树进行分治
+  del[u]=1;
+  for(int i=h[u];i;i=e[i].ne){
+    int v=e[i].v;
+    if(del[v])continue;
+    mxs=sum=siz[v];
+    getroot(v,0); //求根
+    divide(root); //分治
+  }
+}
+int main(){
+  scanf("%d%d",&n,&m);
+  for(int i=1;i<n;++i){
+    int u,v,w;
+    scanf("%d%d%d",&u,&v,&w);
+    add(u,v,w);add(v,u,w);
+  }
+  for(int i=1;i<=m;++i)
+    scanf("%d",&ask[i]);
+  mxs=sum=n;
+  getroot(1,0); 
+  getroot(root,0); //重构siz[] 
+  divide(root);
+  for(int i=1;i<=m;++i)
+    ans[i]?puts("AYE"):puts("NAY");
+  return 0;
+}
+```
+
+### C15 扫描线
+
+py代码还没有，还不怎么会。
+
+```c++
+// 扫描线+线段树+离散化 1.4s
+#include <iostream>
+#include <cstdio>
+#include <algorithm>
+using namespace std;
+
+#define ls u<<1
+#define rs u<<1|1
+const int N=200005;
+struct line{   //扫描线
+  int x1,x2,y;
+  int tag;     //入边:+1,出边:-1
+  bool operator<(line &t){return y<t.y;}
+}L[N];
+int cnt[N*8],len[N*8]; //线段树
+int X[N];              //X坐标
+void pushup(int u,int l, int r){
+  if(cnt[u]) len[u]=X[r+1]-X[l]; //r → X[r+1]
+  else len[u]=len[ls]+len[rs];
+}
+void change(int u,int l,int r,int a,int b,int tag){
+  if(a>r || b<l) return; //越界
+  if(a<=l && r<=b){      //覆盖
+    cnt[u]+=tag;
+    pushup(u,l,r);
+    return;
+  }
+  int m=l+r>>1;
+  change(ls,l,m,a,b,tag); //裂开
+  change(rs,m+1,r,a,b,tag);
+  pushup(u,l,r);
+}
+int main(){
+  int n,x1,x2,y1,y2; scanf("%d",&n);
+  for(int i=1; i<=n; i++){
+    scanf("%d%d%d%d",&x1,&y1,&x2,&y2);
+    L[i]={x1,x2,y1,1};
+    L[n+i]={x1,x2,y2,-1};
+    X[i]=x1; X[n+i]=x2;         
+  }
+  n*=2;
+  sort(L+1,L+n+1); //扫描线排序
+  sort(X+1,X+n+1); //X坐标排序
+  int s=unique(X+1,X+n+1)-X-1; //去重
+  
+  long long ans=0;
+  for(int i=1; i<n; i++){
+    int l=lower_bound(X+1,X+s+1,L[i].x1)-X;
+    int r=lower_bound(X+1,X+s+1,L[i].x2)-X;
+    change(1,1,s,l,r-1,L[i].tag); //x2 → r-1
+    ans+=1ll*(L[i+1].y-L[i].y)*len[1];
+  }
+  printf("%lld\n",ans);
+}
+```
+
 ### C19 kd树
 
 py代码还没有，还不怎么会。
@@ -2634,7 +2795,55 @@ int main(){
 }
 ```
 
+### C118 李超线段树
 
+```c++
+// 李超线段树 O(nlogn)
+#include <iostream>
+#include <cstring>
+#include <algorithm>
+using namespace std;
+
+#define N 50005
+#define ls u<<1
+#define rs u<<1|1
+int n,cnt;
+struct line{
+  double k,b; //斜率,截距
+}p[N*2];
+int tr[N*4]; //线段编号
+
+double Y(int id,int x){ //求Y值
+  return p[id].k*x+p[id].b;
+}
+void change(int u,int l,int r,int id){ //修改  int mid=(l+r)>>1;
+  if(Y(id,mid)>Y(tr[u],mid)) swap(id,tr[u]);
+  if(Y(id,l)>Y(tr[u],l)) change(ls,l,mid,id);
+  if(Y(id,r)>Y(tr[u],r)) change(rs,mid+1,r,id);
+}
+double query(int u,int l,int r,int x){ //查询
+  if(l==r) return Y(tr[u],x);
+  int mid=(l+r)>>1;
+  double t=Y(tr[u],x);
+  if(x<=mid) return max(t,query(ls,l,mid,x));
+  else return max(t,query(rs,mid+1,r,x));
+}
+int main(){
+  scanf("%d",&n);
+  for(int i=1;i<=n;i++){
+    char op[10]; scanf("%s",op);
+    if(op[0]=='P'){
+      double b,k; scanf("%lf%lf",&b,&k);
+      p[++cnt]={k,b-k};
+      change(1,1,N,cnt);
+    }
+    else{
+      int x; scanf("%d",&x);
+      printf("%d\n",(int)query(1,1,N,x)/100);
+    }
+  }
+}
+```
 
 ------
 
@@ -4722,6 +4931,227 @@ int main(){
 }
 ```
 
+### E18 树上背包
+
+```c++
+// 树上背包 O(n^2)
+#include <iostream>
+#include <cstring>
+#include <algorithm>
+#include <vector>
+using namespace std;
+
+const int N=305;
+vector<int> e[N];
+int n,m,w[N],f[N][N],siz[N];
+
+void dfs(int u){
+  f[u][1]=w[u];siz[u]=1;
+  for(int v:e[u]){
+    dfs(v);
+    siz[u]+=siz[v];
+    for(int j=min(m+1,siz[u]);j;j--) //课程
+      for(int k=0;k<=min(j-1,siz[v]);k++) //决策      
+        f[u][j]=max(f[u][j],f[u][j-k]+f[v][k]);
+  }
+}
+int main(){
+  scanf("%d%d",&n,&m);
+  for(int i=1,k; i<=n; i++){
+    scanf("%d%d",&k,&w[i]);
+    e[k].push_back(i);
+  }
+  dfs(0); //虚拟根节点0
+  printf("%d",f[0][m+1]);
+}
+```
+
+### E19 背包方案数
+
+```c++
+// 不超背包容量的方案数
+#include<iostream>
+#include<cstring>
+using namespace std;
+
+const int N=1010, mod=1e9+7;
+int f[N],c[N];
+// f[i]表示背包容量为i时最优选法的总价值
+// c[i]表示背包容量为i时最优选法的方案数
+
+int main(){
+  int n, m, v, w;   
+  scanf("%d%d", &n, &m);    
+  for(int i=0;i<=m;i++) c[i]=1;    
+  
+  for(int i=1; i<=n; i++){    //枚举物品
+    scanf("%d%d",&v,&w);
+    for(int j=m; j>=v; j--){  //枚举体积
+      if(f[j-v]+w>f[j]){      //装新物品总价值更大
+        f[j]=f[j-v]+w;
+        c[j]=c[j-v];
+      }
+      else if(f[j-v]+w==f[j]) //装新物品总价值相等
+        c[j]=(c[j]+c[j-v])%mod;     
+    }
+  }
+  printf("%d\n",c[m]);
+}
+```
+
+### E20 背包具体方案
+
+```c++
+#include<iostream>
+#include<cstring>
+using namespace std;
+
+const int N = 1010;
+int v[N],w[N];
+int f[N][N],p[N][N];
+
+int main(){
+  int n,m; cin>>n>>m;
+  for(int i=1; i<=n; i++) cin>>v[i]>>w[i];
+  
+  for(int i=n; i>=1; i--)   //逆序取物 
+  for(int j=0; j<=m; j++){  //枚举体积
+    f[i][j]=f[i+1][j];
+    p[i][j]=j;              //记录路径列 
+    if(j>=v[i])
+      f[i][j]=max(f[i][j],f[i+1][j-v[i]]+w[i]);
+    if(j>=v[i] && f[i][j]==f[i+1][j-v[i]]+w[i])
+      p[i][j]=j-v[i];
+  }
+  
+  int j=m;
+  for(int i=1; i<=n; i++)
+    if(p[i][j]<j){
+      printf("%d ",i);
+      j=p[i][j];
+    }
+}
+```
+
+### E23 线性DP K笔买卖
+
+```c++
+#include<iostream>
+#include<cstring>
+using namespace std;
+
+const int N=100010, M=110;
+int w[N], f[N][M][2];
+
+int main(){
+  int n, k; cin >> n >> k;
+  for(int i=1; i<=n; i++) cin >> w[i];
+  
+  for(int j=0; j<=k; j++) f[0][j][1]=-1e6;
+
+  for(int i=1; i<=n; i++)
+  for(int j=1; j<=k; j++){
+    f[i][j][0]=max(f[i-1][j][0], f[i-1][j][1]+w[i]);
+    f[i][j][1]=max(f[i-1][j][1], f[i-1][j-1][0]-w[i]);
+  }
+  
+  cout << f[n][k][0];
+}
+```
+
+### E25 TSP-状压DP
+
+```python
+n = int(input())
+s = []
+for i in range(n):
+    s.append(list(map(int, input().split())))
+
+dp = [[1145145 ** 5 for i in range(n)] for _ in range(2 ** n)]
+dp[2 ** 0][0] = 0
+for i in range(2 ** n):
+    for j in range(n):
+        if i & 2 ** j:
+            for k in range(n):
+                if i & 2 ** k and k != j:
+                    dp[i][j] = min(dp[i][j], dp[i ^ 2 ** j][k] + s[k][j])
+# 为了回到原点
+ans = min(dp[2 ** n - 1][j] + s[j][0] for j in range(1, n))
+print(ans)
+```
+
+```c++
+#include <bits/stdc++.h>
+using namespace std;
+int main() {
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+    int n;
+    cin >> n;
+    vector<vector<int>> s(n, vector<int>(n));
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            cin >> s[i][j];
+        }
+    }
+    const int INF = 1e9;  // 比较大的数即可
+    vector<vector<int>> dp(1 << n, vector<int>(n, INF));
+    dp[1][0] = 0; // 只访问了点0，最后停在0
+    for (int mask = 0; mask < (1 << n); mask++) {
+        for (int j = 0; j < n; j++) {
+            if (mask & (1 << j)) { // j在集合中
+                for (int k = 0; k < n; k++) {
+                    if ((mask & (1 << k)) && k != j) {
+                        dp[mask][j] = min(dp[mask][j],
+                                          dp[mask ^ (1 << j)][k] + s[k][j]);
+                    }
+                }
+            }
+        }
+    }
+    int ans = INF;
+    for (int j = 1; j < n; j++) {
+        ans = min(ans, dp[(1 << n) - 1][j] + s[j][0]);
+    }
+    cout << ans << "\n";
+    return 0;
+}
+```
+
+### E29 区间DP-环形石子
+
+```c++
+#include <iostream>
+#include <cstring>
+#include <algorithm>
+using namespace std;
+
+const int N=210;
+int n, a[N], s[N];
+int f[N][N];  //f[i][j]表示把从i到j合并成一堆的得分最小值 
+int g[N][N];  //g[i][j]表示把从i到j合并成一堆的得分最大值 
+
+int main(){
+  memset(f,0x3f,sizeof f); memset(g,-0x3f,sizeof g);
+  scanf("%d",&n);
+  for(int i=1; i<=n; i++)scanf("%d",&a[i]), a[i+n]=a[i];
+  for(int i=1; i<=2*n; i++)s[i]=s[i-1]+a[i], g[i][i]=0, f[i][i]=0;
+  
+  int minv=1e9, maxv=-1e9;
+  for(int len=2; len<=n; len++){            //区间长度 
+    for(int i=1,j; (j=i+len-1)<=2*n; i++){  //区间起点
+      for(int k=i; k<j; k++){               //区间分割点 
+        f[i][j]=min(f[i][j],f[i][k]+f[k+1][j]+s[j]-s[i-1]);
+        g[i][j]=max(g[i][j],g[i][k]+g[k+1][j]+s[j]-s[i-1]); 
+      }
+      minv=min(minv,f[i][i+n-1]); //f[1,n]...f[n,2n-1] 
+      maxv=max(maxv,g[i][i+n-1]); //g[1,n]...g[n,2n-1]      
+    }
+  }
+  printf("%d\n%d\n",minv,maxv);
+}
+```
+
 ### E32 树的重心
 
 ```c++
@@ -4785,7 +5215,139 @@ for i in range(1, n + 1):
         print(i, end = " ")
 ```
 
+### E36 数位DP
 
+```c++
+#include <iostream>
+#include <cstring>
+#include <algorithm>
+using namespace std;
+
+const int N=12;
+int a[N];     //把整数的每一位数字抠出来，存入数组 
+int f[N][N];  //f[i][j]表示一共有i位，且最高位数字是j的不降数的个数 
+
+void init(){  //预处理不降数的个数  
+  for(int i=0; i<=9; i++) f[1][i]=1;  //一位数
+  for(int i=2; i<N; i++)        //阶段：枚举位数 
+    for(int j=0; j<=9; j++)     //状态：枚举最高位 
+      for(int k=j; k<=9; k++)   //决策：枚举次高位 
+        f[i][j]+=f[i-1][k];
+}
+int dp(int n){
+  if(!n) return 1;              //特判，n==0返回1 
+  int cnt=0;
+  while(n) a[++cnt]=n%10, n/=10;//把每一位抠出来存入数组a      
+  
+  int res=0, last=0;            //last表示上一位数字
+  for(int i=cnt; i>=1; --i){    //从高位到低位枚举 
+    int now=a[i];               //now表示当前位数字           
+    for(int j=last; j<now; j++) //枚举当前位可填入的数字  
+      res += f[i][j];           //累加答案
+    if(now<last) break;         //若小，则break                          
+    last=now;                   //更新last
+    if(i==1) res++;             //特判，走到a1的情况 
+  } 
+  return res;
+}
+int main(){
+  init();     //预处理不降数的个数 
+  int l,r;
+  while(cin>>l>>r) cout<<dp(r)-dp(l-1)<<endl;
+  return 0;
+}
+```
+
+### E37 Windy数
+
+```python
+f = [[0] * 20 for i in range(20)]
+def init():
+    for i in range(10):
+        f[1][i] = 1
+    for i in range(2, 20):
+        for j in range(10):
+            for k in range(10):
+                if abs(j - k) >= 2:
+                    f[i][j] += f[i - 1][k]
+def dp(x):
+    if x == 0:
+        return 0
+    xlis = []
+    while x > 0:
+        xlis.append(x % 10)
+        x = x // 10
+    m = len(xlis)
+    res = 0
+    last = -2
+    for i in range(m - 1, -1, -1):
+        new = xlis[i]
+        if i == m - 1:
+            for j in range(1, new):
+                if abs(j - last) >= 2:
+                    res += f[i + 1][j]
+        else:
+            for j in range(new):
+                if abs(j - last) >= 2:
+                    res += f[i + 1][j]
+        if abs(new - last) < 2:
+            break
+        last = new
+        if i == 0:
+            res += 1
+    for i in range(m - 1):
+        for j in range(1, 10):
+            res += f[i + 1][j]
+    return res
+init()
+a, b = map(int, input().split())
+print(dp(b) - dp(a - 1))
+```
+
+```c++
+#include <bits/stdc++.h>
+using namespace std;
+
+const int N = 20;
+int a[N];     //把整数的每一位数字抠出来，存入数组 
+int f[N][10]; //f[i][j]表示一共有i位，且最高位数字为j的Windy数的个数 
+
+void init(){  //预处理Windy数的个数 
+  for(int i=0; i<=9; i++) f[1][i]=1;  //一位数 
+  for(int i=2; i<N; i++)        //阶段：枚举位数 
+    for(int j=0; j<=9; j++)     //状态：枚举第i位 
+      for(int k=0; k<=9; k++)   //决策：枚举第i-1位 
+        if(abs(k-j)>=2) f[i][j]+=f[i-1][k];    
+}
+int dp(int x){
+  if(!x) return 0;                //特判，x==0返回0 
+  int cnt = 0; 
+  while(x) a[++cnt]=x%10, x/=10;  //把每一位抠出来存入数组
+
+  int res=0, last=-2;             //last表示上一位数字 
+  for(int i=cnt; i>=1; --i){      //从高位到低位枚举 
+    int now = a[i];               //now表示当前位数字 
+    for(int j=(i==cnt); j<now; ++j)     //最高位从1开始 
+      if(abs(j-last)>=2) res+=f[i][j];  //累加答案 
+       
+    if(abs(now-last)<2) break;  //不满足定义，break 
+    last = now;                 //更新last 
+    if(i==1) res++;             //特判，走到a1的情况 
+  }
+  
+  for(int i=1; i<cnt; i++)      //答案小于cnt位的 
+    for(int j=1; j<=9; j++) 
+      res += f[i][j]; 
+  return res; 
+}
+int main(){
+  init();   //预处理Windy数的个数 
+  int l,r;
+  cin>>l>>r;
+  cout<<dp(r)-dp(l-1);
+  return 0;
+}
+```
 
 ------
 
@@ -6146,6 +6708,95 @@ int main(){
   Andrew();
   printf("%d\n",rotating_calipers());
   return 0;
+}
+```
+
+### G61 线性基-max
+
+```c++
+// 线性基 O(63*n)
+#include <iostream>
+#include <cstring>
+#include <algorithm>
+using namespace std;
+
+typedef long long LL;
+int n,k;
+LL p[64];
+
+void gauss(){ //高斯消元法
+  for(int i=63;i>=0;i--){
+    // 把当前第i位是1的数换上去
+    for(int j=k;j<n;j++)
+      if(p[j]>>i&1){swap(p[j],p[k]); break;}
+    // 当前第i位所有向量都是0
+    if((p[k]>>i&1)==0) continue;
+    // 把其他数的第i位全部消为0
+    for(int j=0;j<n;j++)
+      if(j!=k&&(p[j]>>i&1)) p[j]^=p[k];
+    // 基的个数+1
+    k++; if(k==n) break;
+  }
+}
+int main(){
+  scanf("%d",&n);
+  for(int i=0;i<n;i++)scanf("%lld",&p[i]);
+  gauss();
+  LL ans=0;
+  for(int i=0;i<k;i++) ans^=p[i];
+  printf("%lld\n",ans);
+}
+```
+
+### G62 线性基-k
+
+```c++
+// 线性基 O(63*n)
+#include <iostream>
+#include <cstring>
+#include <algorithm>
+using namespace std;
+
+typedef long long LL;
+const int N=10005;
+int T,n,m,s;
+LL p[N];
+
+void gauss(){
+  s=0;
+  for(int i=63;i>=0;i--){
+    // 把当前第i位是1的数换上去
+    for(int j=s;j<n;j++)
+      if(p[j]>>i&1){swap(p[j],p[s]);break;}
+    // 当前第i位所有向量都是0
+    if((p[s]>>i&1)==0) continue;
+    // 把其他数的第i位全部消为0
+    for(int j=0;j<n;j++)
+      if(j!=s&&(p[j]>>i&1)) p[j]^=p[s];
+    // 有多组测试数据，不break，会被上一组数据影响
+    s++; if(s==n) break;
+  }
+}
+int main(){
+  scanf("%d",&T);
+  for(int C=1;C<=T;C++){
+    printf("Case #%d:\n",C);
+    scanf("%d",&n);
+    for(int i=0;i<n;i++)scanf("%lld",&p[i]);
+    gauss(); //高斯消元法构造线性基
+    scanf("%d",&m);
+    while(m--){
+      LL k; scanf("%lld",&k); //第k小
+      if(s<n) k--;      //如果能凑出0
+      if(k>=(1ll<<s)) puts("-1");
+      else{
+        LL ans=0;
+        for(int i=0;i<s;i++)
+          if(k>>i&1) ans^=p[s-i-1];
+        printf("%lld\n",ans);
+      }
+    }
+  }
 }
 ```
 

@@ -2,6 +2,10 @@
 
 [TOC]
 
+## 写在前面
+
+本转生指南为EH赛时自用，记录了一些常见PY与C++的语法知识。
+
 ## 一、基本常识
 
 | 功能     | Python   | C++                      |
@@ -65,7 +69,7 @@ py与C++的各函数的时间复杂度一致。以下不加赘述。
 
 | 功能            | Python（列表迭代式yyds）                                     | C++                                                          |
 | --------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
-| **定义/初始化** | `matrix = [[0 for i in range(n + 1)] for j in range(n + 1)]`<br />`a = [1, 2, 3]`<br>`b = [0] * n` | `vector<vector<int>> matrix(n + 1, vector<int>(n + 1, 0));`<br />`vector<int> a = {1, 2, 3};`<br>`vector<int> b(n, 0);` |
+| **定义/初始化** | `matrix = [[0 for i in range(n + 1)] for j in range(n + 1)]`<br />`a = [1, 2, 3]`<br>`b = [0] * n` | `vector<vector<int>> matrix(n + 1, vector<int>(n + 1, 0));`<br />`vector<int> a = {1, 2, 3};`<br>`vector<int> b(n, 0);`<br />`vector<vector<vector<int>>> matrix(n + 1, vector<vector<int>>(n + 1, vector<int>(n + 1, 0)));` |
 | **添加元素**    | `a.append(4)`<br>`a.insert(1, 1.5)`                          | `a.push_back(4);`<br>`a.insert(a.begin()+1, 1.5);`           |
 | **访问元素**    | `val = a[0]`<br>`val = a[-1]`                                | `int val = a[0];`<br>`int val = a.back();`                   |
 | **修改元素**    | `a[0] = 10`                                                  | `a[0] = 10;`                                                 |
@@ -535,5 +539,28 @@ int main(){
         cout << "\n";
     }
 }
+```
+
+## 八、DEBUG
+
+对于py，直接print就行了。
+
+对于C++，可以使用以下代码：
+
+```c++
+#ifdef LOCAL
+template<class T> string ts(T v){stringstream ss;ss<<v;return ss.str();}
+template<class A,class B> string ts(pair<A,B> p){return "("+ts(p.first)+","+ts(p.second)+")";}
+template<class T> string ts(vector<T> v){string s="{";for(auto &x:v)s+=ts(x)+",";return s+"}";}
+template<class T> string ts(set<T> v){string s="{";for(auto &x:v)s+=ts(x)+",";return s+"}";}
+template<class K,class V> string ts(map<K,V> m){string s="{";for(auto &kv:m)s+=ts(kv)+",";return s+"}";}
+template<class T> string ts(multiset<T> v){string s="{";for(auto &x:v)s+=ts(x)+",";return s+"}";}
+template<class T, size_t N> string ts(T (&a)[N]){string s="{";for(size_t i=0;i<N;i++)s+=ts(a[i])+",";return s+"}";}
+void dbg_out(){cerr<<"\n";}
+template<class H,class...T> void dbg_out(H h,T...t){cerr<<" "<<ts(h);dbg_out(t...);}
+#define debug(...) cerr<<"["<<#__VA_ARGS__<<"]:",dbg_out(__VA_ARGS__)
+#else
+#define debug(...) 114514
+#endif
 ```
 
