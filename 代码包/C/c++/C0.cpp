@@ -21,19 +21,14 @@ int n, w[N];
 struct node {
     int l, r, sum;
 } tr[N * 4];
-
 void build(int p, int l, int r) {
-    tr[p].l = l;
-    tr[p].r = r;
-    tr[p].sum = w[l];
+    tr[p].l = l; tr[p].r = r; tr[p].sum = w[l];
     if (l == r) return;
     int m = (l + r) / 2;
     build(lc, l, m);
     build(rc, m + 1, r);
     tr[p].sum = tr[lc].sum + tr[rc].sum;
 }
-
-// 点修改（从根递归进入）
 void update(int p, int x, int k) {
     if (tr[p].l == x && tr[p].r == x) {
         tr[p].sum += k;

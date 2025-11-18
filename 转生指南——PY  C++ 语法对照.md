@@ -500,6 +500,15 @@ print(math.degrees(math.asin(0.5)))  # 输出 30.0（弧度转角度）
 
 C++里的角度需要自己计算，所有东西都是弧度制。acos还有asin的精度需要注意，这俩的精度不是很好，能不用就不用。
 
+### 4. C++ 的其他函数
+
+```c++
+nth_element(first, nth, last);
+int total = std::accumulate(v.begin(), v.end(), 0);
+std::vector<int> psum(v.size());
+std::partial_sum(v.begin(), v.end(), psum.begin());
+```
+
 ## 七、字符串处理
 
 **常用操作**
